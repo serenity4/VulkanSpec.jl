@@ -105,11 +105,6 @@ function VulkanAPI(xml::Document, version = nothing)
   )
 end
 
-aliases(name) = VULKAN_API[].aliases[name]
-follow_alias(name) = follow_alias(VULKAN_API[].aliases, name)
-isalias(name) = isalias(VULKAN_API[].aliases, name)
-hasalias(name) = hasalias(VULKAN_API[].aliases, name)
-
 function classify_functions(functions::Functions, aliases::Aliases, handles::Handles)
   core_functions = Symbol[]
   instance_functions = Symbol[]

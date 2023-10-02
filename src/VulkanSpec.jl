@@ -85,12 +85,6 @@ for T in subtypes(Collection)
   @eval $T(xml::Document, extensions::Extensions, args...) = $T(filter(x -> isenabled(x, extensions), [$S(node, args...) for node in nodes($S, xml)]))
 end
 
-const VULKAN_API = Ref{VulkanAPI}()
-
-# function __init__()
-#   VULKAN_API[] = VulkanAPI(vk_xml)
-# end
-
 for sym in names(@__MODULE__, all = true)
   if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "Spec", "Queue", "RenderPass"])
     @eval export $sym
