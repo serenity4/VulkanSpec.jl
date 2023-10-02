@@ -1,4 +1,4 @@
-module VulkanSpecification
+module VulkanSpec
 
 using StructArrays: StructVector
 using Graphs

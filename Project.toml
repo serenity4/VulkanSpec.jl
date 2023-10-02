@@ -1,4 +1,4 @@
-name = "VulkanSpecification"
+name = "VulkanSpec"
 uuid = "99a7788f-8f0f-454f-8f6c-c6cf389551ae"
 authors = ["Cédric BELMANT"]
 version = "0.1.0"

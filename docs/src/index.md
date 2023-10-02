@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = VulkanSpecification
+CurrentModule = VulkanSpec
 ```
 
-# VulkanSpecification
+# VulkanSpec
 
-Documentation for [VulkanSpecification](https://github.com/serenity4/VulkanSpecification.jl).
+Documentation for [VulkanSpec](https://github.com/serenity4/VulkanSpec.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [VulkanSpecification]
+Modules = [VulkanSpec]
 ```

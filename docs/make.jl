@@ -1,16 +1,16 @@
-using VulkanSpecification
+using VulkanSpec
 using Documenter
 
-DocMeta.setdocmeta!(VulkanSpecification, :DocTestSetup, :(using VulkanSpecification); recursive=true)
+DocMeta.setdocmeta!(VulkanSpec, :DocTestSetup, :(using VulkanSpec); recursive=true)
 
 makedocs(;
-    modules=[VulkanSpecification],
+    modules=[VulkanSpec],
     authors="Cédric BELMANT",
-    repo="https://github.com/serenity4/VulkanSpecification.jl/blob/{commit}{path}#{line}",
-    sitename="VulkanSpecification.jl",
+    repo="https://github.com/serenity4/VulkanSpec.jl/blob/{commit}{path}#{line}",
+    sitename="VulkanSpec.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://serenity4.github.io/VulkanSpecification.jl",
+        canonical="https://serenity4.github.io/VulkanSpec.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/serenity4/VulkanSpecification.jl",
+    repo="github.com/serenity4/VulkanSpec.jl",
     devbranch="main",
 )
