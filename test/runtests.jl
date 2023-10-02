@@ -116,4 +116,35 @@ using Test
       api.structs[:VkDescriptorSetAllocateInfo][4],
     ]
   end
+
+  @testset "Constructors" begin
+    name = :vkCreateInstance
+    @test api.constructors[name] == CreateFunc(api.functions[name], api.handles[:VkInstance], api.structs[:VkInstanceCreateInfo], api.functions[name][1], false)
+
+    name = :vkCreateGraphicsPipelines
+    @test api.constructors[name] == CreateFunc(api.functions[name], api.handles[:VkPipeline], api.structs[:VkGraphicsPipelineCreateInfo], api.functions[name][4], true)
+
+    name = :vkCreateRayTracingPipelinesKHR
+    @test api.constructors[name] == CreateFunc(api.functions[name], api.handles[:VkPipeline], api.structs[:VkRayTracingPipelineCreateInfoKHR], api.functions[name][5], true)
+
+    name = :vkAllocateDescriptorSets
+    @test api.constructors[name] == CreateFunc(api.functions[name], api.handles[:VkDescriptorSet], api.structs[:VkDescriptorSetAllocateInfo], api.functions[name][2], true)
+
+    name = :vkCreateFence
+    @test api.constructors[name] == CreateFunc(api.functions[name], api.handles[:VkFence], api.structs[:VkFenceCreateInfo], api.functions[name][2], false)
+  end
+
+  @testset "Destructors" begin
+    name = :vkDestroyInstance
+    @test api.destructors[name] == DestroyFunc(api.functions[name], api.handles[:VkInstance], api.functions[name][1], false)
+
+    name = :vkDestroyPipeline
+    @test api.destructors[name] == DestroyFunc(api.functions[name], api.handles[:VkPipeline], api.functions[name][2], false)
+
+    name = :vkFreeDescriptorSets
+    @test api.destructors[name] == DestroyFunc(api.functions[name], api.handles[:VkDescriptorSet], api.functions[name][4], true)
+
+    name = :vkDestroyFence
+    @test api.destructors[name] == DestroyFunc(api.functions[name], api.handles[:VkFence], api.functions[name][2], false)
+  end
 end;

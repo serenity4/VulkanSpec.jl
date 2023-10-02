@@ -42,6 +42,8 @@ struct CreateFunc <: Spec
     batch::Bool
 end
 
+name(create::CreateFunc) = name(create.func)
+
 function CreateFunc(spec::SpecFunc, handles::Handles, structs::Structs, aliases::Aliases)
   created_param = last(spec.params)
   handle = handles[follow_alias(innermost_type(created_param.type), aliases)]
@@ -78,6 +80,8 @@ struct DestroyFunc <: Spec
     destroyed_param::SpecFuncParam
     batch::Bool
 end
+
+name(destroy::DestroyFunc) = name(destroy.func)
 
 function DestroyFunc(spec::SpecFunc, handles::Handles)
   destroyed_param = find_destroyed_param(spec, handles)
