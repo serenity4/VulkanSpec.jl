@@ -43,9 +43,10 @@ function Base.show(io::IO, ::MIME"text/plain", ext::SpecExtension)
   inline_infos = String[]
   ext.is_provisional && push!(inline_infos, "provisional")
   ext.is_disabled && push!(inline_infos, "disabled")
+  !isnothing(ext.promoted_to) && push!(inline_infos, "promoted in version $(ext.promoted_to)")
   !isempty(inline_infos) && print(io, " (", join(inline_infos, ", "), ')')
   println(io)
-  ext.platform ∉ (PLATFORM_NONE, PLATFORM_PROVISIONAL) && println(io, "• Platform: ", replace(string(ext.platform), "PLATFORM_" => ""), " (", first(spec_by_field(spec_platforms, :type, ext.platform)).description, ')')
+  ext.platform ∉ (PLATFORM_NONE, PLATFORM_PROVISIONAL) && println(io, "• Platform: ", replace(string(ext.platform), "PLATFORM_" => ""))
   !isempty(ext.requirements) && println(io, "• Depends on: ", join(ext.requirements, ", "))
   n = length(ext.symbols)
   if n > 0
@@ -58,12 +59,12 @@ function Base.show(io::IO, ::MIME"text/plain", ext::SpecExtension)
   end
   if !isnothing(ext.author)
     print(io, "\n• From: ", ext.author)
-    authors = spec_by_field(author_tags, :tag, ext.author)
-    if !isempty(authors)
-      @assert length(authors) == 1
-      print(io, " (", first(authors).author, ')')
-    end
   end
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", collection::Collection)
+  print(io, typeof(collection), " with data ")
+  show(io, mime, collection.data)
 end
 
 function Base.show(io::IO, api::VulkanAPI)

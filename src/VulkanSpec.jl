@@ -83,10 +83,11 @@ for T in subtypes(Collection)
   @eval $T(data::Vector{$S}) = $T(StructVector(data))
   @eval $T(xml::Document, args...) = $T([$S(node, args...) for node in nodes($S, xml)])
   @eval $T(xml::Document, extensions::Extensions, args...) = $T(filter(x -> isenabled(x, extensions), [$S(node, args...) for node in nodes($S, xml)]))
+  @eval export $T
 end
 
 for sym in names(@__MODULE__, all = true)
-  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "Spec", "Queue", "RenderPass"])
+  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "EXTENSION_", "Spec", "Queue", "RenderPass"])
     @eval export $sym
   end
 end

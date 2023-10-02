@@ -112,7 +112,7 @@ function classify_functions(functions::Functions, aliases::Aliases, handles::Han
   for fname in unique!([functions.name; [x for (x, alias) in aliases.dict if haskey(functions, alias)]])
     spec = functions[follow_alias(fname, aliases)]
     t = follow_alias(spec.params[1], aliases)
-    h = get(handles, t, nothing)
+    h = get(handles, t.type, nothing)
     if isnothing(h)
       push!(core_functions, fname)
     else

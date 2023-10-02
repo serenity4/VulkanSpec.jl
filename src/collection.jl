@@ -18,6 +18,7 @@ end
 Base.get(default, collection::Collection, spec::Spec) = get(default, collection, key(spec))
 Base.get(collection::Collection, x, default) = get(Returns(default), collection, x)
 Base.getindex(collection::Collection, x) = get(() -> throw(KeyError(x)), collection, x)
+Base.getindex(collection::Collection, x::Int64) = collection.data[x]
 Base.getindex(collection::Collection, x::AbstractArray) = collection.data[x]
 Base.haskey(collection::Collection, x) = !isnothing(get(collection, x, nothing))
 
