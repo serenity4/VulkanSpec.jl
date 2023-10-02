@@ -108,10 +108,42 @@ function is_inferable_length(spec::Spec)
   end
 end
 
-function length_chain(spec::Union{SpecStructMember,SpecFuncParam}, chain)
+function length_chain(spec::Union{SpecStructMember, SpecFuncParam}, chain, structs)
   parts = Symbol.(split(string(chain), "->"))
-  collect(FieldIterator(parent_spec(spec), parts))
+  collect(FieldIterator(spec, @view(parts[2:end]), structs))
 end
+
+"""
+Iterate through function or struct specification fields from a list of fields.
+`list` is a sequence of fields to get through from `root`.
+"""
+struct FieldIterator
+  root::Union{SpecFuncParam, SpecStructMember}
+  list::Vector{Symbol}
+  structs::Structs
+end
+
+function Base.iterate(f::FieldIterator, state = (0, f.root))
+  (i, root) = state
+  if i == 0
+    spec = f.root
+  else
+    type = innermost_type(root.type)
+    s = get(f.structs, type, nothing)
+    if isnothing(s)
+      i > lastindex(f.list) || error("Failed to retrieve a struct from $root to continue the list $(f.list)")
+      return nothing
+    else
+      spec = s[f.list[i]]
+    end
+  end
+  state = i + 1 > lastindex(f.list) ? nothing : (i + 1, spec)
+  (spec, state)
+end
+
+Base.iterate(_, f::FieldIterator) = iterate(f)
+Base.iterate(f::FieldIterator, ::Nothing) = nothing
+Base.length(f::FieldIterator) = 1 + length(f.list)
 
 """
 Specification for a function.
@@ -133,6 +165,11 @@ struct SpecFunc <: Spec
   error_codes::Vector{Symbol}
 end
 
+@forward_interface SpecFunc field = :params interface = [iteration, indexing]
+function Base.getindex(func::SpecFunc, _name::Symbol)
+  i = findfirst(==(_name) ∘ name, func.params)
+  isnothing(i) ? throw(KeyError(_name)) : func.params[i]
+end
 children(spec::SpecFunc) = spec.params
 
 "API functions."

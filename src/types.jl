@@ -49,35 +49,11 @@ struct SpecStructMember <: Spec
   autovalidity::Bool
 end
 
-"""
-Iterate through function or struct specification fields from a list of fields.
-`list` is a sequence of fields to get through from `root`.
-"""
-struct FieldIterator
-  root::Any
-  list::Any
-end
-
-function Base.iterate(f::FieldIterator)
-  spec = field(f.root, popfirst!(f.list))
-  root = struct_by_name(innermost_type(spec.type))
-  if isnothing(root)
-    isempty(f.list) || error("Failed to retrieve a struct from $spec to continue the list $(f.list)")
-    (spec, nothing)
-  else
-    (spec, FieldIterator(root, f.list))
-  end
-end
-
 function field(spec, name)
   index = findfirst(==(name), children(spec).name)
   !isnothing(index) || error("Failed to retrieve field $name in $spec")
   children(spec)[index]
 end
-
-Base.iterate(_, f::FieldIterator) = iterate(f)
-Base.iterate(f::FieldIterator, ::Nothing) = nothing
-Base.length(f::FieldIterator) = length(f.list)
 
 """
 Specification for a structure.
@@ -101,6 +77,11 @@ struct SpecStruct <: Spec
   members::StructVector{SpecStructMember}
 end
 
+@forward_interface SpecStruct field = :members interface = [iteration, indexing]
+function Base.getindex(type::SpecStruct, _name::Symbol)
+  i = findfirst(==(_name) ∘ name, type.members)
+  isnothing(i) ? throw(KeyError(_name)) : type.members[i]
+end
 children(spec::SpecStruct) = spec.members
 iscreateinfo(spec::SpecStruct) = in(spec.type, (STYPE_CREATE_INFO, STYPE_ALLOCATE_INFO))
 

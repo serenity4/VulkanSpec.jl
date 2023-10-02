@@ -92,7 +92,7 @@ const VULKAN_API = Ref{VulkanAPI}()
 # end
 
 for sym in names(@__MODULE__, all = true)
-  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_"])
+  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "Spec", "Queue", "RenderPass"])
     @eval export $sym
   end
 end
