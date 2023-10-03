@@ -1,5 +1,4 @@
 using VulkanSpec
-using VulkanSpec: SpecHandle
 using StructArrays
 using Test
 
@@ -100,6 +99,35 @@ using Test
     @test api.structs[name] == SpecStruct(name, STYPE_DATA, false, [], StructVector([
       SpecStructMember(api.structs[name], :matrix, :(NTuple{3,NTuple{4,Float32}}), false, false, REQUIRED, nothing, [], true),
     ]))
+
+    @testset "Members" begin
+      strct = api.structs[:VkApplicationInfo]
+      sType, pNext, pApplicationName, applicationVersion, pEngineName, engineVersion, apiVersion = strct
+      @test sType.type == :VkStructureType && sType.requirement == REQUIRED
+      @test pNext.type == :(Ptr{Cvoid}) && pNext.requirement == OPTIONAL && pNext.is_constant
+      @test pApplicationName.type == :Cstring && pApplicationName.requirement == OPTIONAL && pApplicationName.is_constant
+      @test applicationVersion.type == :UInt32 && applicationVersion.requirement == REQUIRED
+      @test pEngineName.type == :Cstring && pEngineName.requirement == OPTIONAL && pEngineName.is_constant
+      @test engineVersion.type == :UInt32 && engineVersion.requirement == REQUIRED
+      @test apiVersion.type == :UInt32 && apiVersion.requirement == REQUIRED
+
+      strct = api.structs[:VkAccelerationStructureBuildGeometryInfoKHR]
+      sType, pNext, type, flags, mode, srcAccelerationStructure, dstAccelerationStructure, geometryCount, pGeometries, ppGeometries, scratchData = strct
+      @test sType.type == :VkStructureType && sType.requirement == REQUIRED
+      @test pNext.type == :(Ptr{Cvoid}) && pNext.requirement == OPTIONAL && pNext.is_constant
+      @test type.type == :VkAccelerationStructureTypeKHR && type.requirement == REQUIRED
+      @test flags.type == :VkBuildAccelerationStructureFlagsKHR && flags.requirement == OPTIONAL
+      @test mode.type == :VkBuildAccelerationStructureModeKHR && mode.requirement == REQUIRED
+      @test srcAccelerationStructure.type == :VkAccelerationStructureKHR && srcAccelerationStructure.requirement == OPTIONAL
+      @test dstAccelerationStructure.type == :VkAccelerationStructureKHR && dstAccelerationStructure.requirement == OPTIONAL
+      @test geometryCount.type == :UInt32 && geometryCount.requirement == OPTIONAL
+      @test geometryCount.arglen == [:pGeometries, :ppGeometries]
+      @test pGeometries.type == :(Ptr{VkAccelerationStructureGeometryKHR}) && pGeometries.requirement == OPTIONAL
+      @test pGeometries.is_constant && pGeometries.len == :geometryCount
+      @test ppGeometries.type == :(Ptr{Ptr{VkAccelerationStructureGeometryKHR}}) && ppGeometries.requirement == POINTER_OPTIONAL
+      @test ppGeometries.is_constant && ppGeometries.len == :geometryCount
+      @test scratchData.type == :VkDeviceOrHostAddressKHR && scratchData.requirement == REQUIRED
+    end
   end
 
   @testset "Unions" begin
@@ -124,19 +152,64 @@ using Test
         SpecFuncParam(api.functions[name], :pipelineBindPoint, :VkPipelineBindPoint, false, false, REQUIRED, nothing, [], true),
         SpecFuncParam(api.functions[name], :pipeline, :VkPipeline, false, false, REQUIRED, nothing, [], true),
       ]), [], [])
-  end
 
-  @testset "Function classification" begin
-    @test :vkCreateInstance in api.core_functions
-    @test :vkEnumerateInstanceVersion in api.core_functions
-    @test :vkGetInstanceProcAddr in api.instance_functions
-    @test :vkEnumeratePhysicalDevices in api.instance_functions
-    @test :vkCreateDevice in api.instance_functions
-    @test :vkAllocateCommandBuffers in api.device_functions
-    @test :vkGetDeviceProcAddr in api.device_functions
-    nfunctionaliases = count(x -> haskey(api.functions, follow_alias(x, api.aliases)), keys(api.aliases.dict)) 
-    n = length(api.functions) + nfunctionaliases
-    @test n == sum(length, (api.core_functions, api.instance_functions, api.device_functions))
+    @testset "Classification" begin
+      @test :vkCreateInstance in api.core_functions
+      @test :vkEnumerateInstanceVersion in api.core_functions
+      @test :vkGetInstanceProcAddr in api.instance_functions
+      @test :vkEnumeratePhysicalDevices in api.instance_functions
+      @test :vkCreateDevice in api.instance_functions
+      @test :vkAllocateCommandBuffers in api.device_functions
+      @test :vkGetDeviceProcAddr in api.device_functions
+      nfunctionaliases = count(x -> haskey(api.functions, follow_alias(x, api.aliases)), keys(api.aliases.dict))
+      n = length(api.functions) + nfunctionaliases
+      @test n == sum(length, (api.core_functions, api.instance_functions, api.device_functions))
+    end
+
+    @testset "Parameters" begin
+      func = api.functions[:vkCreateInstance]
+      pCreateInfo, pAllocator, pInstance = func
+      @test pCreateInfo.is_constant && pCreateInfo.requirement == REQUIRED
+      @test pAllocator.is_constant && pAllocator.requirement == OPTIONAL
+      @test !pInstance.is_constant && pInstance.requirement == REQUIRED
+      @test pCreateInfo.type == :(Ptr{VkInstanceCreateInfo})
+      @test pInstance.type == :(Ptr{VkInstance})
+      @test pAllocator.type == :(Ptr{VkAllocationCallbacks})
+
+      func = api.functions[:vkEnumeratePhysicalDevices]
+      instance, pPhysicalDeviceCount, pPhysicalDevices = func
+      @test instance.type == :VkInstance && instance.requirement == REQUIRED
+      @test !pPhysicalDeviceCount.is_constant && pPhysicalDeviceCount.type == :(Ptr{UInt32})
+      @test pPhysicalDeviceCount.requirement == POINTER_REQUIRED && pPhysicalDeviceCount.arglen == [:pPhysicalDevices]
+      @test !pPhysicalDevices.is_constant && pPhysicalDevices.type == :(Ptr{VkPhysicalDevice})
+      @test pPhysicalDevices.requirement == OPTIONAL && pPhysicalDevices.len == :pPhysicalDeviceCount
+
+      func = api.functions[:vkCmdBindPipeline]
+      commandBuffer, pipelineBindPoint, pipeline = func
+      @test commandBuffer.type == :VkCommandBuffer && commandBuffer.requirement == REQUIRED
+      @test commandBuffer.is_externsync
+      @test pipelineBindPoint.type == :VkPipelineBindPoint && pipelineBindPoint.requirement == REQUIRED
+      @test pipeline.type == :VkPipeline && pipeline.requirement == REQUIRED
+
+      func = api.functions[:vkAllocateDescriptorSets]
+      device, pAllocateInfo, pDescriptorSets = func
+      @test device.type == :VkDevice && device.requirement == REQUIRED
+      @test pAllocateInfo.type == :(Ptr{VkDescriptorSetAllocateInfo}) && pAllocateInfo.requirement == REQUIRED
+      @test pAllocateInfo.is_constant && pAllocateInfo.is_externsync
+      @test pDescriptorSets.type == :(Ptr{VkDescriptorSet}) && pDescriptorSets.requirement == REQUIRED
+      @test pDescriptorSets.len == Symbol("pAllocateInfo->descriptorSetCount")
+
+      func = api.functions[:vkFreeCommandBuffers]
+      device, commandPool, commandBufferCount, pCommandBuffers = func
+      @test device.type == :VkDevice && device.requirement == REQUIRED
+      @test commandPool.type == :VkCommandPool && commandPool.requirement == REQUIRED
+      @test commandPool.is_externsync
+      @test commandBufferCount.type == :UInt32 && commandBufferCount.requirement == REQUIRED
+      @test commandBufferCount.arglen == [:pCommandBuffers]
+      @test pCommandBuffers.type == :(Ptr{VkCommandBuffer}) && pCommandBuffers.requirement == REQUIRED
+      @test pCommandBuffers.is_constant && pCommandBuffers.len == :commandBufferCount
+      @test pCommandBuffers.is_externsync
+    end
   end
 
   @testset "Handles" begin
