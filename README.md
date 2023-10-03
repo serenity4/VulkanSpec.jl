@@ -17,4 +17,4 @@ The functionality provided by this package was originally meant to help automate
 
 ... and probably more!
 
-Check out the **[DOCUMENTATION](https://serenity4.github.io/VulkanSpec.jl/dev/)** to get started!
+Check out the **[DOCUMENTATION](https://serenity4.github.io/VulkanSpec.jl/dev/)** to get started.
