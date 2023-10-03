@@ -110,6 +110,9 @@ using Test
       @test pEngineName.type == :Cstring && pEngineName.requirement == OPTIONAL && pEngineName.is_constant
       @test engineVersion.type == :UInt32 && engineVersion.requirement == REQUIRED
       @test apiVersion.type == :UInt32 && apiVersion.requirement == REQUIRED
+      @test apiVersion.autovalidity
+      @test !is_version(pEngineName, api.constants)
+      @test is_version(apiVersion, api.constants)
 
       strct = api.structs[:VkAccelerationStructureBuildGeometryInfoKHR]
       sType, pNext, type, flags, mode, srcAccelerationStructure, dstAccelerationStructure, geometryCount, pGeometries, ppGeometries, scratchData = strct
@@ -127,6 +130,49 @@ using Test
       @test ppGeometries.type == :(Ptr{Ptr{VkAccelerationStructureGeometryKHR}}) && ppGeometries.requirement == POINTER_OPTIONAL
       @test ppGeometries.is_constant && ppGeometries.len == :geometryCount
       @test scratchData.type == :VkDeviceOrHostAddressKHR && scratchData.requirement == REQUIRED
+      @test !is_arr(pNext)
+      @test !is_arr(geometryCount)
+      @test is_arr(pGeometries)
+      @test is_arr(ppGeometries)
+
+      strct = api.structs[:VkDescriptorSetLayoutBinding]
+      binding, descriptorType, descriptorCount, stageFlags, pImmutableSampler = strct
+      # `descriptorCount` is not necessarily the length of another vector - it is the number of descriptors to be allocated, with no relation to the dimensions of other arguments. If provided, `pImmutableSampler` must have this length, but if not, the length can't be inferred.
+      @test !is_inferable_length(descriptorCount)
+      @test pImmutableSampler.requirement == OPTIONAL && pImmutableSampler.len == :descriptorCount
+      @test len(pImmutableSampler) == descriptorCount
+      @test arglen(descriptorCount) == [pImmutableSampler]
+      @test !pImmutableSampler.autovalidity
+
+      strct = api.structs[:VkShaderModuleCreateInfo]
+      sType, pNext, flags, codeSize, pCode = strct
+      @test flags.requirement == OPTIONAL
+      @test pCode.len == :(codeSize / 4)
+      @test codeSize.arglen == []
+      @test ismissing(len(pCode))
+      @test !is_length(codeSize) && !is_size(codeSize) # not directly, at least
+      @test pImmutableSampler.requirement == OPTIONAL && pImmutableSampler.len == :descriptorCount
+      @test len(pImmutableSampler) == descriptorCount
+      @test arglen(descriptorCount) == [pImmutableSampler]
+      @test !pImmutableSampler.autovalidity
+
+      strct = api.structs[:VkWriteDescriptorSet]
+      sType, pNext, dstSet, dstBinding, dstArrayElement, descriptorCount, descriptorType, pImageInfo, pBufferInfo, pTexelBufferView = strct
+      @test len(pImageInfo) == len(pBufferInfo) == len(pTexelBufferView) == descriptorCount
+      @test arglen(descriptorCount) == [pImageInfo, pBufferInfo, pTexelBufferView]
+      # In the sense that it is the length of either of them (and others have zero count), not all of them.
+      # See https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkWriteDescriptorSet
+      @test is_length_exception(descriptorCount)
+
+      strct = api.structs[:VkSpecializationInfo]
+      mapEntryCount, pMapEntries, dataSize, pData = strct
+      @test mapEntryCount.arglen == [:pMapEntries] && arglen(mapEntryCount) == [pMapEntries]
+      @test pMapEntries.len == :mapEntryCount && len(pMapEntries) == mapEntryCount
+      @test dataSize.arglen == [:pData] && arglen(dataSize) == [pData]
+      @test pData.len == :dataSize && len(pData) == dataSize
+      @test is_length(mapEntryCount) && is_inferable_length(mapEntryCount)
+      @test is_data(pData)
+      @test is_size(dataSize) && !is_length(dataSize)
     end
   end
 
@@ -209,6 +255,10 @@ using Test
       @test pCommandBuffers.type == :(Ptr{VkCommandBuffer}) && pCommandBuffers.requirement == REQUIRED
       @test pCommandBuffers.is_constant && pCommandBuffers.len == :commandBufferCount
       @test pCommandBuffers.is_externsync
+      @test len(pCommandBuffers) == commandBufferCount
+      @test arglen(commandBufferCount) == [pCommandBuffers]
+      @test !is_length_exception(commandBufferCount)
+      @test is_inferable_length(commandBufferCount)
     end
   end
 

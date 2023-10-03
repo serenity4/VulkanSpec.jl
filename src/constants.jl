@@ -21,7 +21,7 @@ function follow_constant(spec::SpecConstant, constants::Constants)
 end
 
 function follow_constant(name, constants::Constants)
-  constant = get(constants, constant, nothing)
+  constant = get(constants, name, nothing)
   isnothing(constant) ? name : follow_constant(constant, constants)
 end
 
