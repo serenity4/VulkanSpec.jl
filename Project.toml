@@ -15,6 +15,13 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 Vulkan_Headers_jll = "8d446b21-f3ad-5576-a034-752265b9b6f9"
 
 [compat]
+BitMasks = "0.1"
+DocStringExtensions = "0.9"
+EzXML = "1"
+ForwardMethods = "1"
+Graphs = "1"
+MLStyle = "0.4"
+StructArrays = "0.6"
 julia = "1.7"
 
 [extras]
