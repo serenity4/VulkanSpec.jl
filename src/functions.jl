@@ -71,69 +71,6 @@ end
 
 Base.:(==)(x::SpecFuncParam, y::SpecFuncParam) = all(getproperty(x, name) == getproperty(y, name) for name in fieldnames(SpecFuncParam) if name !== :parent)
 
-is_arr(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && innermost_type(spec.type) ≠ :Cvoid
-is_length(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && !is_size(spec)
-is_size(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && endswith(string(spec.name), r"[sS]ize")
-is_data(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && spec.type == :(Ptr{Cvoid})
-is_version(spec::Union{SpecStructMember,SpecFuncParam}, constants::Constants) =
-  !isnothing(match(r"($v|V)ersion", string(spec.name))) && (
-    follow_constant(spec.type, constants) == :UInt32 ||
-    is_ptr(spec.type) && !is_arr(spec) && !spec.is_constant && follow_constant(ptr_type(spec.type), constants) == :UInt32
-  )
-
-"""
-    len(pCode)
-
-Return the function parameter or struct member which describes the length of the provided pointer argument.
-When the length is more complex than a simple argument, i.e. is a function of another parameter, `missing` is returned.
-In this case, refer to the `.len` field of the argument to get the correct `Expr`.
-"""
-function len end
-
-len(specs, arg::ExprLike) = missing
-len(specs, arg::Symbol) = specs[findfirst(==(arg) ∘ name, specs)::Int]
-len(spec::SpecStructMember) = len(spec.parent.members, spec.len)
-len(spec::SpecFuncParam) = len(spec.parent.params, spec.len)
-
-
-"""
-    arglen(queueCount)
-
-Return the function parameters or struct members whose length is encoded by the provided argument.
-"""
-function arglen end
-arglen(specs, names::Vector{<:ExprLike}) = specs[findall(in(names) ∘ name, specs)]
-arglen(spec::SpecStructMember) = arglen(spec.parent.members, spec.arglen)
-arglen(spec::SpecFuncParam) = arglen(spec.parent.params, spec.arglen)
-
-"""
-True if the argument behaves differently than other length parameters, and requires special care.
-"""
-function is_length_exception(spec::SpecStructMember)
-  is_length(spec) && @match spec.parent.name begin
-    # see `descriptorCount` at https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkWriteDescriptorSet
-    :VkWriteDescriptorSet => spec.name == :descriptorCount
-    _ => false
-  end
-end
-is_length_exception(spec::SpecFuncParam) = false
-
-"""
-True if the argument that can be inferred from other arguments.
-"""
-function is_inferable_length(spec::SpecStructMember)
-  is_length(spec) && @match spec.parent.name begin
-    :VkDescriptorSetLayoutBinding => spec.name ≠ :descriptorCount
-    _ => true
-  end
-end
-is_inferable_length(spec::SpecFuncParam) = true
-
-function length_chain(spec::Union{SpecStructMember, SpecFuncParam}, chain, structs)
-  parts = Symbol.(split(string(chain), "->"))
-  collect(FieldIterator(spec, @view(parts[2:end]), structs))
-end
-
 """
 Iterate through function or struct specification fields from a list of fields.
 `list` is a sequence of fields to get through from `root`.
@@ -162,7 +99,6 @@ function Base.iterate(f::FieldIterator, state = (0, f.root))
   (spec, state)
 end
 
-Base.iterate(_, f::FieldIterator) = iterate(f)
 Base.iterate(f::FieldIterator, ::Nothing) = nothing
 Base.length(f::FieldIterator) = 1 + length(f.list)
 
@@ -193,6 +129,7 @@ struct SpecFunc <: Spec
   end
 end
 
+@forward_methods SpecFunc field = :params Base.keys
 @forward_interface SpecFunc field = :params interface = [iteration, indexing]
 function Base.getindex(func::SpecFunc, _name::Symbol)
   i = findfirst(==(_name) ∘ name, func.params)
@@ -203,4 +140,66 @@ children(spec::SpecFunc) = spec.params
 "API functions."
 struct Functions <: Collection{SpecFunc}
   data::data_type(SpecFunc)
+end
+
+is_arr(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && innermost_type(spec.type) ≠ :Cvoid
+is_length(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && !is_size(spec)
+is_size(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && endswith(string(spec.name), r"[sS]ize")
+is_data(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && spec.type == :(Ptr{Cvoid})
+is_version(spec::Union{SpecStructMember,SpecFuncParam}, constants::Constants) =
+  !isnothing(match(r"($v|V)ersion", string(spec.name))) && (
+    follow_constant(spec.type, constants) == :UInt32 ||
+    is_ptr(spec.type) && !is_arr(spec) && !spec.is_constant && follow_constant(ptr_type(spec.type), constants) == :UInt32
+  )
+
+"""
+    len(pCode)
+
+Return the function parameter or struct member which describes the length of the provided pointer argument.
+When the length is more complex than a simple argument, i.e. is a function of another parameter, `missing` is returned.
+In this case, refer to the `.len` field of the argument to get the correct `Expr`.
+"""
+function len end
+
+len(spec::Union{SpecFunc, SpecStruct}, arg::ExprLike) = missing
+len(spec::Union{SpecFunc, SpecStruct}, arg::Symbol) = spec[findfirst(==(arg) ∘ name, spec)::Int]
+len(spec::SpecStructMember) = len(spec.parent, spec.len)
+len(spec::SpecFuncParam) = len(spec.parent, spec.len)
+
+"""
+    arglen(queueCount)
+
+Return the function parameters or struct members whose length is encoded by the provided argument.
+"""
+function arglen end
+arglen(spec::Union{SpecFunc, SpecStruct}, names::Vector{<:ExprLike}) = spec[findall(in(names) ∘ name, spec)]
+arglen(spec::SpecStructMember) = arglen(spec.parent, spec.arglen)
+arglen(spec::SpecFuncParam) = arglen(spec.parent, spec.arglen)
+
+"""
+True if the argument behaves differently than other length parameters, and requires special care.
+"""
+function is_length_exception(spec::SpecStructMember)
+  is_length(spec) && @match spec.parent.name begin
+    # see `descriptorCount` at https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkWriteDescriptorSet
+    :VkWriteDescriptorSet => spec.name == :descriptorCount
+    _ => false
+  end
+end
+is_length_exception(spec::SpecFuncParam) = false
+
+"""
+True if the argument that can be inferred from other arguments.
+"""
+function is_inferable_length(spec::SpecStructMember)
+  is_length(spec) && @match spec.parent.name begin
+    :VkDescriptorSetLayoutBinding => spec.name ≠ :descriptorCount
+    _ => true
+  end
+end
+is_inferable_length(spec::SpecFuncParam) = true
+
+function length_chain(spec::Union{SpecStructMember, SpecFuncParam}, chain, structs)
+  parts = Symbol.(split(string(chain), "->"))
+  collect(FieldIterator(spec, @view(parts[2:end]), structs))
 end

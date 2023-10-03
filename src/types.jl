@@ -91,6 +91,7 @@ struct SpecStruct <: Spec
   end
 end
 
+@forward_methods SpecStruct field = :members Base.keys
 @forward_interface SpecStruct field = :members interface = [iteration, indexing]
 function Base.getindex(type::SpecStruct, _name::Symbol)
   i = findfirst(==(_name) ∘ name, type.members)
