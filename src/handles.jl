@@ -107,17 +107,4 @@ end
 
 Destructors(functions::Functions, handles::Handles) = Destructors([DestroyFunc(func, handles) for func in functions[in.(functions.type, Ref((FTYPE_DESTROY, FTYPE_FREE)))]])
 
-create_func(func::SpecFunc) = first(spec_by_field(spec_create_funcs, :func, func))
-create_func(name) = first(spec_by_field(spec_create_funcs, :func, func_by_name(name)))
-create_funcs(handle::SpecHandle) = spec_by_field(spec_create_funcs, :handle, handle)
-
-function create_func_no_batch(handle::SpecHandle)
-    fs = create_funcs(handle)
-    fs[findfirst(x -> x.handle == handle && !x.batch, fs)]
-end
-
-destroy_func(func::SpecFunc) = first(spec_by_field(spec_destroy_funcs, :func, func))
-destroy_func(name) = first(spec_by_field(spec_destroy_funcs, :func, func_by_name(name)))
-destroy_funcs(handle::SpecHandle) = spec_by_field(spec_destroy_funcs, :handle, handle)
-
-is_destructible(spec::SpecHandle) = spec ∈ spec_destroy_funcs.handle
+Base.getindex(funcs::Union{Constructors, Destructors}, handle::SpecHandle) = funcs[findall(x -> x.handle == handle, funcs)]

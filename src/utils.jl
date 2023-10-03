@@ -1,18 +1,3 @@
-function member_attr(node::Node, attr)
-    attr == "name" && haskey(node, "alias") && return node["name"] # special handling for aliases
-    val = findfirst(".//$attr", node)
-    isnothing(val) && error("Attribute $attr not found in node\n$node")
-    val.content
-end
-
-function resolve_aliases!(collection::Dict, nodes)
-    for node ∈ nodes
-        if haskey(node, "alias")
-            collection[node["name"]] = collection[node["alias"]]
-        end
-    end
-end
-
 function nested_ntuple(base_type, lengths)
     make_tuple = (x, y) -> :(NTuple{$x,$y})
     foldr(make_tuple, lengths; init = base_type)
@@ -49,13 +34,6 @@ function extract_identifier(param)
 end
 getattr(node::Node, attr; default = nothing, symbol = true) =
     haskey(node, attr) ? (symbol ? Symbol(node[attr]) : node[attr]) : default
-
-function parent_name(node::Node)
-    parel = node.parentelement
-    parel.name == "command" ? command_name(parel) :
-    parel.name == "type" && parel["category"] ∈ ["struct", "union"] ? struct_name(parel) :
-    error("Unknown parent element:\n    $parel")
-end
 
 function command_name(node::Node)
     isnothing(findfirst("proto", node)) && return command_name(node.parentelement)
@@ -104,11 +82,3 @@ function innermost_type(t)
         _ => error("Cannot take innermost type of $t")
     end
 end
-
-is_ptr_to_ptr(ex) = !isnothing(ptrtype(ptrtype(ex)))
-is_ptr(ex) = !isnothing(ptr_type(ex))
-
-ptr_type(ex) = @when :(Ptr{$T}) = ex T
-ntuple_type(ex) = @when :(NTuple{$N,$T}) = ex T
-
-is_ntuple(ex) = !isnothing(ntuple_type(ex))

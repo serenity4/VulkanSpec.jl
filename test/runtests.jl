@@ -279,6 +279,14 @@ using Test
     @test follow_alias(:VkDescriptorUpdateTemplateKHR, api.aliases) == :VkDescriptorUpdateTemplate
     @test follow_alias(:VkPhysicalDeviceMemoryProperties2KHR, api.aliases) == :VkPhysicalDeviceMemoryProperties2
     @test follow_alias(:VkPhysicalDeviceMemoryProperties2, api.aliases) == :VkPhysicalDeviceMemoryProperties2
+
+    @test api.aliases[:VkImageMemoryBarrier2] == [:VkImageMemoryBarrier2KHR]
+    @test api.aliases[:VkImageMemoryBarrier2KHR] == []
+    @test api.aliases[:VkPhysicalDeviceVariablePointersFeatures] == [
+      :VkPhysicalDeviceVariablePointerFeatures
+      :VkPhysicalDeviceVariablePointerFeaturesKHR
+      :VkPhysicalDeviceVariablePointersFeaturesKHR
+    ]
   end
 
   @testset "Parameters" begin
@@ -317,6 +325,15 @@ using Test
 
     name = :vkDestroyFence
     @test api.destructors[name] == DestroyFunc(api.functions[name], api.handles[:VkFence], api.functions[name][2], false)
+
+    handles_without_destructors = filter(x -> length(api.destructors[x]) == 0, api.handles.data)
+    @test handles_without_destructors.name == [:VkPhysicalDevice, :VkQueue, :VkPerformanceConfigurationINTEL, :VkDisplayKHR, :VkDisplayModeKHR]
+
+    handles_without_constructors = filter(x -> length(api.constructors[x]) == 0, api.handles.data)
+    @test handles_without_constructors.name == setdiff(handles_without_destructors.name, [:VkDisplayModeKHR])
+
+    handles_with_multiple_constructors = filter(x -> length(api.constructors[x]) > 1, api.handles.data)
+    @test handles_with_multiple_constructors.name == [:VkPipeline, :VkRenderPass, :VkSurfaceKHR, :VkSwapchainKHR]
   end
 
   @testset "Constants" begin
@@ -421,6 +438,13 @@ using Test
       name = "SPV_KHR_multiview"
       extension = api.extensions_spirv[name]
       @test extension == SpecExtensionSPIRV("SPV_KHR_multiview", v"1.1.0", ["VK_KHR_multiview"])
+    end
+
+    @testset "Printing" begin
+      for collection in (api.extensions, api.functions, api.structs, api.authors)
+        @test isa(sprint(show, collection), String)
+        @test isa(sprint(show, MIME"text/plain"(), collection), String)
+      end
     end
   end
 end;

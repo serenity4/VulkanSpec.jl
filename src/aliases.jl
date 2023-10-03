@@ -29,7 +29,6 @@ end
 isalias(name, aliases::Aliases) = name ∈ keys(aliases.dict)
 "Whether an alias was built from this name."
 hasalias(name, aliases::Aliases) = name ∈ values(aliases.dict)
-aliases(index, aliases::Aliases) = getindex.(Ref(aliases.verts), outneighbors(aliases.graph, index))
 
 function Base.get(default, aliases::Aliases, name::Symbol)
   index = findfirst(==(name), aliases.verts)
