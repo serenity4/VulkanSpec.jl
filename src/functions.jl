@@ -129,7 +129,7 @@ struct SpecFunc <: Spec
   end
 end
 
-@forward_methods SpecFunc field = :params Base.keys
+@forward_methods SpecFunc field = :params Base.keys Base.filter(pred, _)
 @forward_interface SpecFunc field = :params interface = [iteration, indexing]
 function Base.getindex(func::SpecFunc, _name::Symbol)
   i = findfirst(==(_name) ∘ name, func.params)
@@ -151,6 +151,8 @@ is_version(spec::Union{SpecStructMember,SpecFuncParam}, constants::Constants) =
     follow_constant(spec.type, constants) == :UInt32 ||
     is_ptr(spec.type) && !is_arr(spec) && !spec.is_constant && follow_constant(ptr_type(spec.type), constants) == :UInt32
   )
+is_ptr(ex) = !isnothing(ptr_type(ex))
+ptr_type(ex) = @when :(Ptr{$T}) = ex T
 
 """
     len(pCode)
@@ -199,7 +201,7 @@ function is_inferable_length(spec::SpecStructMember)
 end
 is_inferable_length(spec::SpecFuncParam) = true
 
-function length_chain(spec::Union{SpecStructMember, SpecFuncParam}, chain, structs)
+function length_chain(spec::Union{SpecStruct, SpecFunc}, chain, structs)
   parts = Symbol.(split(string(chain), "->"))
-  collect(FieldIterator(spec, @view(parts[2:end]), structs))
+  collect(FieldIterator(spec[parts[1]], @view(parts[2:end]), structs))
 end

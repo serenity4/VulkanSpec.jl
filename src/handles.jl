@@ -20,14 +20,10 @@ struct Handles <: Collection{SpecHandle}
   data::data_type(SpecHandle)
 end
 
-is_void(t) = t == :Cvoid || t in [
-    :xcb_connection_t,
-    :_XDisplay,
-    :Display,
-    :wl_surface,
-    :wl_display,
-    :CAMetalLayer,
-]
+function parent_hierarchy(spec::SpecHandle, handles::Handles)
+  isnothing(spec.parent) && return [spec.name]
+  [parent_hierarchy(handles[spec.parent], handles); spec.name]
+end
 
 """
 Function `func` that creates a `handle` from a create info structure `create_info_struct` passed as the value of the parameter `create_info_param`.

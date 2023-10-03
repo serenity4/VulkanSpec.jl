@@ -58,14 +58,14 @@ end
 
 Extensions(xml::Document) = Extensions(SpecExtension.(findall("//extension", xml)))
 
-is_core(spec, extensions::Extensions) = !haskey(extensions, spec)
+iscore(spec, extensions::Extensions) = !haskey(extensions, spec)
 function is_platform_specific(x, extensions::Extensions)
   extension = get(extensions, x, nothing)
   isnothing(extension) && return false
   extension.platform ≠ PLATFORM_NONE
 end
 
-isenabled(x, extensions::Extensions) = is_core(x, extensions) || !(extensions[x].is_disabled)
+isenabled(x, extensions::Extensions) = iscore(x, extensions) || !(extensions[x].is_disabled)
 
 struct AuthorTag <: Spec
   tag::String

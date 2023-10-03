@@ -22,7 +22,7 @@ Base.getindex(collection::Collection, x::Int64) = collection.data[x]
 Base.getindex(collection::Collection, x::AbstractArray) = collection.data[x]
 Base.haskey(collection::Collection, x) = !isnothing(get(collection, x, nothing))
 
-@forward_methods Collection field = :data Base.keys
+@forward_methods Collection field = :data Base.keys Base.filter(pred, _)
 @forward_interface Collection field = :data interface = [iteration, indexing] omit = [getindex]
 
 @generated function Base.getproperty(collection::Collection{T}, name::Symbol) where {T}

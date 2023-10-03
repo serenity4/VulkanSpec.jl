@@ -173,6 +173,10 @@ using Test
       @test is_length(mapEntryCount) && is_inferable_length(mapEntryCount)
       @test is_data(pData)
       @test is_size(dataSize) && !is_length(dataSize)
+
+      strct = api.structs[:VkAccelerationStructureVersionInfoKHR]
+      sType, pNext, pVersionData = strct
+      @test !is_version(pVersionData, api.constants)
     end
   end
 
@@ -290,7 +294,7 @@ using Test
   end
 
   @testset "Parameters" begin
-    @test length_chain(api.functions[:vkAllocateDescriptorSets][2], "pAllocateInfo->descriptorSetCount", api.structs) == [
+    @test length_chain(api.functions[:vkAllocateDescriptorSets], "pAllocateInfo->descriptorSetCount", api.structs) == [
       api.functions[:vkAllocateDescriptorSets][2],
       api.structs[:VkDescriptorSetAllocateInfo][4],
     ]

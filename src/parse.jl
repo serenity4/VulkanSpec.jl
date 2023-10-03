@@ -314,30 +314,6 @@ function spec_by_name(specs, name)
   end
 end
 
-func_by_name(name) = spec_by_name(spec_funcs, name)
-struct_by_name(name) = spec_by_name(spec_structs, name)
-union_by_name(name) = spec_by_name(spec_unions, name)
-handle_by_name(name) = spec_by_name(spec_handles, name)
-bitmask_by_name(name) = spec_by_name(spec_bitmasks, name)
-flag_by_name(name) = spec_by_name(spec_flags, name)
-enum_by_name(name) = spec_by_name(spec_enums, name)
-constant_by_name(name) = spec_by_name(spec_constants, name)
-
-Base.parent(spec::SpecFuncParam) = spec.func
-Base.parent(spec::SpecStructMember) = spec.parent
-Base.parent(spec::SpecHandle) = spec.parent
-
-has_parent(spec::SpecHandle) = !isnothing(parent(spec))
-
-parent_spec(spec::SpecFuncParam) = func_by_name(parent(spec))
-parent_spec(spec::SpecStructMember) = struct_by_name(parent(spec))
-parent_spec(spec::SpecHandle) = handle_by_name(parent(spec))
-
-function parent_hierarchy(spec::SpecHandle, handles::Handles)
-  isnothing(parent(spec)) && return [spec.name]
-  [parent_hierarchy(handles[parent(spec)], handles); spec.name]
-end
-
 function parse_structure_types(xml)
   stype_vals = findall("//member[@values]", xml)
   res = Dict()

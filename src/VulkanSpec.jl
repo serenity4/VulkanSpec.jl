@@ -101,7 +101,7 @@ export
   SpecBitmask,
   SpecConstant,
   SpecEnum,
-  SpecExtension,
+  SpecExtension, iscore, isenabled,
   SpecFlag,
   SpecFunc,
   SpecFuncParam,
@@ -118,7 +118,6 @@ export
 
   # Classification
   extension_types,
-  structure_types,
 
   # API
   VulkanAPI,
@@ -131,28 +130,10 @@ export
 
   # Specifications
   ### Utility
-  default,
-  func_by_name,
-  struct_by_name,
-  union_by_name,
-  handle_by_name,
-  bitmask_by_name,
-  flag_by_name,
-  enum_by_name,
-  constant_by_name,
-  create_func,
-  create_funcs,
-  create_func_no_batch,
-  destroy_func,
-  destroy_funcs,
   follow_constant,
   children,
-  parent_spec,
-  has_parent,
   parent_hierarchy,
   len,
-  has_length,
-  has_computable_length,
   arglen,
   is_length,
   is_length_exception,
@@ -161,23 +142,10 @@ export
   is_arr,
   is_size,
   is_data,
-  is_fn_ptr,
   is_version,
-  is_void,
-  extension,
 
   ### Render passes
-  RenderPassRequirement,
-  RenderPassInside,
-  RenderPassOutside,
   render_pass_compatibility_map,
-
-  ### Queues
-  QueueType,
-  QueueCompute,
-  QueueGraphics,
-  QueueTransfer,
-  QueueSparseBinding,
 
   ### Structures & functions
   PARAM_REQUIREMENT,

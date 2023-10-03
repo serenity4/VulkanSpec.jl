@@ -57,7 +57,7 @@ end
 Base.:(==)(x::SpecStructMember, y::SpecStructMember) = all(getproperty(x, name) == getproperty(y, name) for name in fieldnames(SpecStructMember) if name !== :parent)
 
 function field(spec, name)
-  index = findfirst(==(name), children(spec).name)
+  index = findfirst(==(name), spec.name)
   !isnothing(index) || error("Failed to retrieve field $name in $spec")
   children(spec)[index]
 end
@@ -91,7 +91,7 @@ struct SpecStruct <: Spec
   end
 end
 
-@forward_methods SpecStruct field = :members Base.keys
+@forward_methods SpecStruct field = :members Base.keys Base.filter(pred, _)
 @forward_interface SpecStruct field = :members interface = [iteration, indexing]
 function Base.getindex(type::SpecStruct, _name::Symbol)
   i = findfirst(==(_name) ∘ name, type.members)
