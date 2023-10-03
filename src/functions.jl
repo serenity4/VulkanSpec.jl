@@ -45,7 +45,7 @@ Specification for a function parameter.
 """
 struct SpecFuncParam <: Spec
   "Name of the parent function."
-  func::Symbol
+  parent::Any
   "Identifier."
   name::Symbol
   "Expression of its idiomatic Julia type."
@@ -63,6 +63,13 @@ struct SpecFuncParam <: Spec
   "Whether automatic validity documentation is enabled. If false, this means that the parameter may be an exception to at least one Vulkan convention."
   autovalidity::Bool
 end
+
+function Base.getproperty(param::SpecFuncParam, name::Symbol)
+  name === :parent && return getfield(param, :parent)::SpecFunc
+  getfield(param, name)
+end
+
+Base.:(==)(x::SpecFuncParam, y::SpecFuncParam) = all(getproperty(x, name) == getproperty(y, name) for name in fieldnames(SpecFuncParam) if name !== :parent)
 
 is_arr(spec::Union{SpecStructMember,SpecFuncParam}) = has_length(spec) && innermost_type(spec.type) ≠ :Cvoid
 is_length(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && !is_size(spec)
@@ -163,6 +170,13 @@ struct SpecFunc <: Spec
   params::StructVector{SpecFuncParam}
   success_codes::Vector{Symbol}
   error_codes::Vector{Symbol}
+  function SpecFunc(name, type, return_type, render_pass_compatibility, queue_compatibility, params, success_codes, error_codes)
+    func = new(name, type, return_type, render_pass_compatibility, queue_compatibility, StructVector(SpecFuncParam[]), success_codes, error_codes)
+    for param in params
+      push!(func.params, isa(param, SpecFuncParam) ? param : SpecFuncParam(param, func))
+    end
+    func
+  end
 end
 
 @forward_interface SpecFunc field = :params interface = [iteration, indexing]

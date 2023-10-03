@@ -50,13 +50,13 @@ using Test
   @testset "Structs" begin
     name = :VkApplicationInfo
     @test api.structs[name] == SpecStruct(name, STYPE_GENERIC_INFO, false, [], StructVector([
-      SpecStructMember(name, :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :pApplicationName, :Cstring, true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :applicationVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :pEngineName, :Cstring, true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :engineVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :apiVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :pApplicationName, :Cstring, true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :applicationVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :pEngineName, :Cstring, true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :engineVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :apiVersion, :UInt32, false, false, REQUIRED, nothing, [], true),
     ]))
 
     name = :VkPipelineViewportCoarseSampleOrderStateCreateInfoNV
@@ -70,35 +70,35 @@ using Test
 
     name = :VkInstanceCreateInfo
     @test api.structs[name] == SpecStruct(name, STYPE_CREATE_INFO, false, [], StructVector([
-      SpecStructMember(name, :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :flags, :VkInstanceCreateFlags, false, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :pApplicationInfo, :(Ptr{VkApplicationInfo}), true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :enabledLayerCount, :UInt32, false, false, OPTIONAL, nothing, [:ppEnabledLayerNames], true),
-      SpecStructMember(name, :ppEnabledLayerNames, :(Ptr{Cstring}), true, false, REQUIRED, :enabledLayerCount, [], true),
-      SpecStructMember(name, :enabledExtensionCount, :UInt32, false, false, OPTIONAL, nothing, [:ppEnabledExtensionNames], true),
-      SpecStructMember(name, :ppEnabledExtensionNames, :(Ptr{Cstring}), true, false, REQUIRED, :enabledExtensionCount, [], true),
+      SpecStructMember(api.structs[name], :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :flags, :VkInstanceCreateFlags, false, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :pApplicationInfo, :(Ptr{VkApplicationInfo}), true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :enabledLayerCount, :UInt32, false, false, OPTIONAL, nothing, [:ppEnabledLayerNames], true),
+      SpecStructMember(api.structs[name], :ppEnabledLayerNames, :(Ptr{Cstring}), true, false, REQUIRED, :enabledLayerCount, [], true),
+      SpecStructMember(api.structs[name], :enabledExtensionCount, :UInt32, false, false, OPTIONAL, nothing, [:ppEnabledExtensionNames], true),
+      SpecStructMember(api.structs[name], :ppEnabledExtensionNames, :(Ptr{Cstring}), true, false, REQUIRED, :enabledExtensionCount, [], true),
     ]))
 
     name = :VkDescriptorSetLayoutBindingFlagsCreateInfo
     @test api.structs[name] == SpecStruct(name, STYPE_CREATE_INFO, false, [:VkDescriptorSetLayoutCreateInfo], StructVector([
-      SpecStructMember(name, :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :bindingCount, :UInt32, false, false, OPTIONAL, nothing, [:pBindingFlags], true),
-      SpecStructMember(name, :pBindingFlags, :(Ptr{VkDescriptorBindingFlags}), true, false, POINTER_REQUIRED, :bindingCount, [], true),
+      SpecStructMember(api.structs[name], :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :bindingCount, :UInt32, false, false, OPTIONAL, nothing, [:pBindingFlags], true),
+      SpecStructMember(api.structs[name], :pBindingFlags, :(Ptr{VkDescriptorBindingFlags}), true, false, POINTER_REQUIRED, :bindingCount, [], true),
     ]))
 
     name = :VkDisplayPlaneInfo2KHR
     @test api.structs[name] == SpecStruct(name, STYPE_GENERIC_INFO, false, [], StructVector([
-      SpecStructMember(name, :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
-      SpecStructMember(name, :mode, :VkDisplayModeKHR, false, true, REQUIRED, nothing, [], true),
-      SpecStructMember(name, :planeIndex, :UInt32, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :sType, :VkStructureType, false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :pNext, :(Ptr{Cvoid}), true, false, OPTIONAL, nothing, [], true),
+      SpecStructMember(api.structs[name], :mode, :VkDisplayModeKHR, false, true, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :planeIndex, :UInt32, false, false, REQUIRED, nothing, [], true),
     ]))
 
     name = :VkTransformMatrixKHR
     @test api.structs[name] == SpecStruct(name, STYPE_DATA, false, [], StructVector([
-      SpecStructMember(name, :matrix, :(NTuple{3,NTuple{4,Float32}}), false, false, REQUIRED, nothing, [], true),
+      SpecStructMember(api.structs[name], :matrix, :(NTuple{3,NTuple{4,Float32}}), false, false, REQUIRED, nothing, [], true),
     ]))
   end
 
@@ -113,16 +113,16 @@ using Test
   @testset "Functions" begin
     name = :vkCreateInstance
     @test api.functions[name] == SpecFunc(name, FTYPE_CREATE, :VkResult, [], [], StructVector([
-        SpecFuncParam(name, :pCreateInfo, :(Ptr{VkInstanceCreateInfo}), true, false, REQUIRED, nothing, [], true),
-        SpecFuncParam(name, :pAllocator, :(Ptr{VkAllocationCallbacks}), true, false, OPTIONAL, nothing, [], true),
-        SpecFuncParam(name, :pInstance, :(Ptr{VkInstance}), false, false, REQUIRED, nothing, [], true),
+        SpecFuncParam(api.functions[name], :pCreateInfo, :(Ptr{VkInstanceCreateInfo}), true, false, REQUIRED, nothing, [], true),
+        SpecFuncParam(api.functions[name], :pAllocator, :(Ptr{VkAllocationCallbacks}), true, false, OPTIONAL, nothing, [], true),
+        SpecFuncParam(api.functions[name], :pInstance, :(Ptr{VkInstance}), false, false, REQUIRED, nothing, [], true),
       ]), [:VK_SUCCESS], [:VK_ERROR_OUT_OF_HOST_MEMORY, :VK_ERROR_OUT_OF_DEVICE_MEMORY, :VK_ERROR_INITIALIZATION_FAILED, :VK_ERROR_LAYER_NOT_PRESENT, :VK_ERROR_EXTENSION_NOT_PRESENT, :VK_ERROR_INCOMPATIBLE_DRIVER])
 
     name = :vkCmdBindPipeline
     @test api.functions[name] == SpecFunc(name, FTYPE_COMMAND, :Cvoid, [RenderPassInside(), RenderPassOutside()], [QueueGraphics(), QueueCompute()], StructVector([
-        SpecFuncParam(name, :commandBuffer, :VkCommandBuffer, false, true, REQUIRED, nothing, [], true),
-        SpecFuncParam(name, :pipelineBindPoint, :VkPipelineBindPoint, false, false, REQUIRED, nothing, [], true),
-        SpecFuncParam(name, :pipeline, :VkPipeline, false, false, REQUIRED, nothing, [], true),
+        SpecFuncParam(api.functions[name], :commandBuffer, :VkCommandBuffer, false, true, REQUIRED, nothing, [], true),
+        SpecFuncParam(api.functions[name], :pipelineBindPoint, :VkPipelineBindPoint, false, false, REQUIRED, nothing, [], true),
+        SpecFuncParam(api.functions[name], :pipeline, :VkPipeline, false, false, REQUIRED, nothing, [], true),
       ]), [], [])
   end
 

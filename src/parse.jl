@@ -7,15 +7,15 @@ const queue_map = Dict(
     :encode => QueueVideoEncode(),
 )
 
-const render_pass_compatibiltiy_map = Dict(
+const render_pass_compatibility_map = Dict(
     :both => [RenderPassInside(), RenderPassOutside()],
     :inside => [RenderPassInside()],
     :outside => [RenderPassOutside()],
 )
 
-function SpecStructMember(node::Node)
+function SpecStructMember(node::Node, parent::SpecStruct)
     SpecStructMember(
-        parent_name(node),
+        parent,
         extract_identifier(node),
         extract_type(node),
         is_constant(node),
@@ -49,7 +49,7 @@ function SpecStruct(node::Node)
         type,
         returnedonly,
         extends,
-        StructVector(SpecStructMember.(findall("./member", node))),
+        findall("./member", node),
     )
 end
 
@@ -65,8 +65,8 @@ function SpecUnion(node::Node)
     )
 end
 
-SpecFuncParam(node::Node) = SpecFuncParam(
-    parent_name(node),
+SpecFuncParam(node::Node, parent::SpecFunc) = SpecFuncParam(
+    parent,
     extract_identifier(node),
     extract_type(node),
     is_constant(node),
@@ -84,7 +84,7 @@ function SpecFunc(node::Node)
         ::Nothing => []
     end
     rp_reqs = @match getattr(node, "renderpass") begin
-        x::Symbol => render_pass_compatibiltiy_map[x]
+        x::Symbol => render_pass_compatibility_map[x]
         ::Nothing => []
     end
     ctype = @match findfirst(startswith.(string(name), ["vkCreate", "vkDestroy", "vkAllocate", "vkFree", "vkCmd"])) begin
@@ -101,7 +101,7 @@ function SpecFunc(node::Node)
         return_type,
         rp_reqs,
         queues,
-        StructVector(SpecFuncParam.(findall("./param", node))),
+        findall("./param", node),
         codes("successcodes"),
         codes("errorcodes"),
     )

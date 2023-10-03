@@ -170,7 +170,7 @@ export
   RenderPassRequirement,
   RenderPassInside,
   RenderPassOutside,
-  render_pass_compatibiltiy_map,
+  render_pass_compatibility_map,
 
   ### Queues
   QueueType,

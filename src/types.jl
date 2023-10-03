@@ -30,7 +30,7 @@ Specification for a structure parameter.
 """
 struct SpecStructMember <: Spec
   "Name of the parent structure."
-  parent::Symbol
+  parent::Any
   "Identifier."
   name::Symbol
   "Expression of its idiomatic Julia type."
@@ -48,6 +48,13 @@ struct SpecStructMember <: Spec
   "Whether automatic validity documentation is enabled. If false, this means that the member may be an exception to at least one Vulkan convention."
   autovalidity::Bool
 end
+
+function Base.getproperty(member::SpecStructMember, name::Symbol)
+  name === :parent && return getfield(member, :parent)::SpecStruct
+  getfield(member, name)
+end
+
+Base.:(==)(x::SpecStructMember, y::SpecStructMember) = all(getproperty(x, name) == getproperty(y, name) for name in fieldnames(SpecStructMember) if name !== :parent)
 
 function field(spec, name)
   index = findfirst(==(name), children(spec).name)
@@ -75,6 +82,13 @@ struct SpecStruct <: Spec
   extends::Vector{Symbol}
   "Structure members."
   members::StructVector{SpecStructMember}
+  function SpecStruct(name, type, is_returnedonly, extends, members)
+    ret = new(name, type, is_returnedonly, extends, StructVector(SpecStructMember[]))
+    for member in members
+      push!(ret.members, isa(member, SpecStructMember) ? member : SpecStructMember(member, ret))
+    end
+    ret
+  end
 end
 
 @forward_interface SpecStruct field = :members interface = [iteration, indexing]
