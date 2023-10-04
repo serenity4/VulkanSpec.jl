@@ -18,12 +18,14 @@ Requirement types:
 - `REQUIRED`: must be provided, no sentinel value is allowed.
 - `POINTER_OPTIONAL`: is a pointer which may be null, but must have valid elements if provided.
 - `POINTER_REQUIRED`: must be a valid pointer, but its elements are optional (e.g. are allowed to be sentinel values).
+- `POINTER_FULLY_OPTIONAL`: may be null, or a pointer with optional elements (e.g. are allowed to be sentinel values).
 """
-@enum PARAM_REQUIREMENT OPTIONAL REQUIRED POINTER_OPTIONAL POINTER_REQUIRED
+@enum PARAM_REQUIREMENT OPTIONAL REQUIRED POINTER_OPTIONAL POINTER_REQUIRED POINTER_FULLY_OPTIONAL
 
-PARAM_REQUIREMENT(node::Node) =
-  !haskey(node, "optional") || node["optional"] == "false" ? REQUIRED :
-  PARAM_REQUIREMENT(findfirst(node["optional"] .== ["true", "false", "true,false", "false,true"]) - 1)
+function PARAM_REQUIREMENT(node::Node)
+  (!haskey(node, "optional") || node["optional"] == "false") && return REQUIRED
+  PARAM_REQUIREMENT(findfirst(node["optional"] .== ["true", "false", "true,false", "false,true", "true,true"]) - 1)
+end
 
 """
 Specification for a structure parameter.

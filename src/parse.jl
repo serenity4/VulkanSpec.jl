@@ -102,7 +102,7 @@ function SpecFunc(node::Node)
         return_type,
         rp_reqs,
         queues,
-        findall("./param", node),
+        findall("./param[not(@api) or @api='vulkan']", node),
         codes("successcodes"),
         codes("errorcodes"),
     )
@@ -197,11 +197,13 @@ function SpecExtension(node::Node)
   end
   requires = getattr(node, "requires", default = "", symbol = false)
   requirements = isempty(requires) ? String[] : split(requires, ',')
-  is_disabled = @match node["supported"] begin
-    "vulkan" => false
-    "disabled" => true
-    s => error("Unknown extension support value '$s'")
-  end
+  supported = split(node["supported"], ',')
+  support = EXTENSION_SUPPORT_DISABLED
+  in("vulkan", supported) && (support |= EXTENSION_SUPPORT_VULKAN)
+  in("vulkansc", supported) && (support |= EXTENSION_SUPPORT_VULKAN_SC)
+  in("disabled", supported) && (support = EXTENSION_SUPPORT_DISABLED)
+  unknown = filter(!in(("vulkan", "vulkansc", "disabled")), supported)
+  !isempty(unknown) && error("Unknown extension support value(s) $(join('`' .* string.(unknown) .* '`', ", "))")
   platform = PlatformType(getattr(node, "platform", symbol = false))
   symbols = map(x -> getattr(x, "name"), findall(".//*[@name]", node))
   promoted_to = getattr(node, "promotedto", symbol = false)
@@ -210,7 +212,7 @@ function SpecExtension(node::Node)
     node["name"],
     exttype,
     requirements,
-    is_disabled,
+    support,
     getattr(node, "author", symbol = false),
     symbols,
     platform,
@@ -331,10 +333,10 @@ nodes(::Type{SpecCapabilitySPIRV}, xml::Document) = findall("//spirvcapability",
 nodes(::Type{SpecEnum}, xml::Document) = findall("//enums[@type = 'enum' and not(@alias)]", xml)
 nodes(::Type{SpecBitmask}, xml::Document) = findall("//enums[@type = 'bitmask' and not(@alias)]", xml)
 nodes(::Type{SpecFlag}, xml::Document) = findall("//type[@category = 'bitmask' and not(@alias)]", xml)
-nodes(::Type{SpecConstant}, xml::Document) = [findall("//enums[@name = 'API Constants']/*[@value and @name]", xml); findall("//extension/require/enum[not(@extends) and not(@alias) and @value]", xml); findall("/registry/types/type[@category = 'basetype' or @category = 'bitmask' and not(@alias)]", xml)]
+nodes(::Type{SpecConstant}, xml::Document) = [findall("//enums[@name = 'API Constants']/*[@value and @name]", xml); findall("//extension/require/enum[not(@extends) and not(@alias) and @value]", xml); findall("/registry/types/type[@category = 'basetype' or @category = 'bitmask' and not(@alias) and (not(@api) or @api='vulkan')]", xml)]
 nodes(::Type{SpecStruct}, xml::Document) = findall("//type[@category = 'struct' and not(@alias)]", xml)
 nodes(::Type{SpecUnion}, xml::Document) = findall("//type[@category = 'union' and not(@alias)]", xml)
-nodes(::Type{SpecFunc}, xml::Document) = findall("//command[not(@name)]", xml)
+nodes(::Type{SpecFunc}, xml::Document) = findall("//command[not(@name) and (not(@api) or @api='vulkan')]", xml)
 nodes(::Type{SpecHandle}, xml::Document) = findall("//type[@category = 'handle' and not(@alias)]", xml)
 function nodes(::Type{SpecAlias}, xml::Document)
   aliases = findall("//*[@alias and @name]", xml)

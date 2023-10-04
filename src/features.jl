@@ -6,21 +6,22 @@ end
 
 @bitmask PlatformType::UInt32 begin
   PLATFORM_NONE        = 0
-  PLATFORM_XCB         = 1
-  PLATFORM_XLIB        = 2
-  PLATFORM_XLIB_XRANDR = 4
-  PLATFORM_WAYLAND     = 8
-  PLATFORM_METAL       = 16
-  PLATFORM_MACOS       = 32
-  PLATFORM_IOS         = 64
-  PLATFORM_WIN32       = 128
-  PLATFORM_ANDROID     = 256
-  PLATFORM_GGP         = 512
-  PLATFORM_VI          = 1024
-  PLATFORM_FUCHSIA     = 2048
-  PLATFORM_DIRECTFB    = 4096
-  PLATFORM_SCREEN      = 8192
-  PLATFORM_PROVISIONAL = 16384
+  PLATFORM_XCB         = 1 << 0
+  PLATFORM_XLIB        = 1 << 1
+  PLATFORM_XLIB_XRANDR = 1 << 2
+  PLATFORM_WAYLAND     = 1 << 3
+  PLATFORM_METAL       = 1 << 4
+  PLATFORM_MACOS       = 1 << 5
+  PLATFORM_IOS         = 1 << 6
+  PLATFORM_WIN32       = 1 << 7
+  PLATFORM_ANDROID     = 1 << 8
+  PLATFORM_GGP         = 1 << 9
+  PLATFORM_VI          = 1 << 10
+  PLATFORM_FUCHSIA     = 1 << 11
+  PLATFORM_DIRECTFB    = 1 << 12
+  PLATFORM_SCREEN      = 1 << 13
+  PLATFORM_PROVISIONAL = 1 << 14
+  PLATFORM_SCI         = 1 << 15
 end
 
 "API platforms."
@@ -35,11 +36,21 @@ struct Platforms <: Collection{SpecPlatform}
   data::data_type(SpecPlatform)
 end
 
+"Describes what type of support an extension has per the specification."
+@bitmask ExtensionSupport::UInt32 begin
+  "Disabled."
+  EXTENSION_SUPPORT_DISABLED = 0
+  "Standard Vulkan."
+  EXTENSION_SUPPORT_VULKAN = 1 << 0
+  "Vulkan SC, for safety-critical systems."
+  EXTENSION_SUPPORT_VULKAN_SC = 1 << 1
+end
+
 struct SpecExtension <: Spec
   name::String
   type::ExtensionType
   requirements::Vector{String}
-  is_disabled::Bool
+  support::ExtensionSupport
   author::Optional{String}
   symbols::Vector{Symbol}
   platform::PlatformType
@@ -65,7 +76,8 @@ function is_platform_specific(x, extensions::Extensions)
   extension.platform ≠ PLATFORM_NONE
 end
 
-isenabled(x, extensions::Extensions) = iscore(x, extensions) || !(extensions[x].is_disabled)
+"Return whether an extension is enabled for standard Vulkan - that is, a given symbol `x` is either core or is from an extension that has not been disabled, or is not exclusive to Vulkan SC."
+isenabled(x, extensions::Extensions) = iscore(x, extensions) || EXTENSION_SUPPORT_VULKAN in extensions[x].support
 
 struct AuthorTag <: Spec
   tag::String

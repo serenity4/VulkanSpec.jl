@@ -77,6 +77,7 @@ include("functions.jl")
 include("handles.jl")
 include("parse.jl")
 include("api.jl")
+include("diff.jl")
 include("show.jl")
 
 for T in subtypes(Collection)
@@ -95,7 +96,7 @@ for sym in names(@__MODULE__, all = true)
 end
 
 @compile_workload begin
-  api = VulkanAPI(joinpath(pkgdir(@__MODULE__), "vk.xml"))
+  api = VulkanAPI(joinpath(pkgdir(@__MODULE__), "specs", "vk.1.3.207.xml"))
   for collection in (api.extensions, api.functions, api.structs, api.authors, api)
     sprint(show, collection)
     sprint(show, MIME"text/plain"(), collection)
@@ -131,6 +132,7 @@ export
 
   # API
   VulkanAPI,
+  Diff, RemovedSymbol, isbreaking,
 
   # Alias manipulation
   alias_dict,

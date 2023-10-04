@@ -22,22 +22,43 @@ struct VulkanAPI
   core_functions::Vector{Symbol}
   instance_functions::Vector{Symbol}
   device_functions::Vector{Symbol}
-  "All symbols defined by the API, excluding aliases."
-  all_symbols::Dictionary{Symbol, Spec}
+  "Symbols defined by the API, excluding aliases."
+  symbols::Dictionary{Symbol, Spec}
+  symbols_including_aliases::Dictionary{Symbol, Spec}
 end
+
+Base.getindex(api::VulkanAPI, symbol::Symbol) = api.symbols_including_aliases[symbol]
+Base.get(api::VulkanAPI, symbol::Symbol, default) = get(api.symbols_including_aliases, symbol, default)
+
+download_specification(version::VersionNumber) = download("https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v$version/xml/vk.xml")
+download_specification_video(version::VersionNumber) = download("https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v$version/xml/video.xml")
 
 function VulkanAPI(version::VersionNumber)
-  xml_file = download("https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v$version/xml/vk.xml")
-  VulkanAPI(xml_file, version)
+  api = VulkanAPI(download_specification(version), version)
+  version < v"1.2.203" && return api
+  video_api = VulkanAPI(download_specification_video(version))
+  union!(api.structs, video_api.structs)
+  union!(api.enums, video_api.enums)
+  union!(api.constants, video_api.constants)
+  union!(api.extensions, video_api.extensions)
+  merge!(api.symbols, video_api.symbols)
+  merge!(api.symbols_including_aliases, video_api.symbols_including_aliases)
+  api
 end
 
-VulkanAPI(xml_file::AbstractString, version = nothing) = VulkanAPI(readxml(xml_file), version)
+function infer_version_from_filename(xml_file::AbstractString)
+  m = match(r"(\d+\.\d+\.\d+).xml$", basename(xml_file))
+  isnothing(m) && return nothing
+  parse(VersionNumber, m[1])
+end
+
+VulkanAPI(xml_file::AbstractString, version = infer_version_from_filename(xml_file)) = VulkanAPI(readxml(xml_file), version)
 
 function VulkanAPI(xml::Document, version = nothing)
   platforms = Platforms(xml)
   authors = Authors(xml)
   extensions = Extensions(xml)
-  disabled_symbols = Set(foldl(append!, extensions[extensions.is_disabled].symbols; init = Symbol[]))
+  disabled_symbols = Set(foldl(append!, extensions[.!in.(EXTENSION_SUPPORT_VULKAN, extensions.support)].symbols; init = Symbol[]))
   aliases = Aliases(xml)
   extensions_spirv = ExtensionsSPIRV(xml)
   capabilities_spirv = CapabilitiesSPIRV(xml)
@@ -51,6 +72,26 @@ function VulkanAPI(xml::Document, version = nothing)
   handles = Handles(xml, extensions)
   constructors = Constructors(functions, handles, structs, aliases)
   destructors = Destructors(functions, handles)
+
+  # Extend all types with core and extension values.
+  extensible = [enums..., bitmasks..., structs...]
+  for node in findall("//*[@extends and not(@alias)]", xml)
+    spec = extensible[findfirst(spec -> name(spec) == Symbol(node["extends"]), extensible)]
+    @switch spec begin
+      @case ::SpecBitmask
+      if haskey(node, "bitpos") && !haskey(node, "value")
+        value = SpecBit(node)
+        !in(value, spec.bits) && !in(value.name, disabled_symbols) && push!(spec.bits, value)
+      elseif haskey(node, "value")
+        value = SpecBitCombination(node)
+        !in(value, spec.combinations) && !in(value.name, disabled_symbols) && push!(spec.combinations, value)
+      end
+      @case ::SpecEnum
+      value = SpecConstant(node)
+      !in(value, spec.enums) && !in(value.name, disabled_symbols) && push!(spec.enums, value)
+    end
+  end
+
   all_specs = [
     functions...,
     structs...,
@@ -62,22 +103,8 @@ function VulkanAPI(xml::Document, version = nothing)
     (bitmasks.bits...)...,
     (bitmasks.combinations...)...
   ]
-
-  # Extend all types with core and extension values.
-  extensible = [enums..., bitmasks..., structs...]
-  for node in findall("//*[@extends and not(@alias)]", xml)
-    spec = extensible[findfirst(spec -> name(spec) == Symbol(node["extends"]), extensible)]
-    @switch spec begin
-      @case ::SpecBitmask
-      if haskey(node, "bitpos") && !haskey(node, "value")
-        push!(spec.bits, SpecBit(node))
-      elseif haskey(node, "value")
-        push!(spec.combinations, SpecBitCombination(node))
-      end
-      @case ::SpecEnum
-      push!(spec.enums, SpecConstant(node))
-    end
-  end
+  symbols = sortkeys!(Dictionary(name.(all_specs), all_specs))
+  symbols_including_aliases = sortkeys!(merge!(dictionary([name => symbols[follow_alias(name, aliases)] for name in keys(aliases.dict) if !in(name, disabled_symbols)]), symbols))
 
   structure_types = parse_structure_types(xml)
   VulkanAPI(
@@ -101,7 +128,8 @@ function VulkanAPI(xml::Document, version = nothing)
     aliases,
     structure_types,
     classify_functions(functions, aliases, handles)...,
-    sortkeys!(Dictionary(name.(all_specs), all_specs)),
+    symbols,
+    symbols_including_aliases,
   )
 end
 

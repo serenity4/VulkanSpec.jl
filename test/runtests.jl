@@ -6,11 +6,15 @@ using Test
   api = VulkanAPI(v"1.3.207")
   @test isa(api, VulkanAPI)
   @test api.version == v"1.3.207"
-  @test length(api.structs) == 750
+  @test length(api.structs) == 801
   @test length(api.unions) == 9
   @test length(api.functions) == 465
-  @test length(api.all_symbols) == 3412
+  @test length(api.symbols) == 4676
   @test length(api.aliases.dict) == 872
+  @test length(api.symbols_including_aliases) == 5546 # disabled symbols are not included
+  @test Set(api.symbols_including_aliases) == Set(api.symbols)
+  @test issubset(keys(api.symbols), keys(api.symbols_including_aliases))
+  @test allunique(keys(api.symbols_including_aliases))
 
   @testset "Extensions" begin
     extension = api.extensions["VK_KHR_swapchain"]
@@ -22,12 +26,12 @@ using Test
     @test :VkSwapchainCreateInfoKHR in extension.symbols
 
     name = "VK_IMG_filter_cubic"
-    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_DEVICE, [], false, "IMG", [
+    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_DEVICE, [], EXTENSION_SUPPORT_VULKAN, "IMG", [
         :VK_IMG_FILTER_CUBIC_SPEC_VERSION, :VK_IMG_FILTER_CUBIC_EXTENSION_NAME, :VK_FILTER_CUBIC_IMG, :VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG
       ], PLATFORM_NONE, false, nothing, nothing)
 
     name = "VK_KHR_mir_surface"
-    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_INSTANCE, ["VK_KHR_surface"], true, "KHR", [
+    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_INSTANCE, ["VK_KHR_surface"], EXTENSION_SUPPORT_DISABLED, "KHR", [
         :VK_KHR_MIR_SURFACE_SPEC_VERSION,
         :VK_KHR_MIR_SURFACE_EXTENSION_NAME,
       ], PLATFORM_NONE, false, nothing, nothing)
@@ -365,7 +369,6 @@ using Test
         SpecBit(:VK_QUEUE_PROTECTED_BIT, 4),
         SpecBit(:VK_QUEUE_VIDEO_DECODE_BIT_KHR, 5),
         SpecBit(:VK_QUEUE_VIDEO_ENCODE_BIT_KHR, 6),
-        SpecBit(:VK_QUEUE_RESERVED_7_BIT_QCOM, 7),
     ]), StructVector(SpecBitCombination[]), 32)
 
     @test api.bitmasks[:VkShaderStageFlagBits] == SpecBitmask(:VkShaderStageFlagBits, StructVector([
@@ -452,15 +455,21 @@ using Test
     end
   end
 
-  @testset "New specification features/structure" begin
+  @testset "New specification features & evolution" begin
     api_2 = VulkanAPI(v"1.3.240")
     @test isa(api_2, VulkanAPI)
     @test length(api_2.structs) > 100 + length(api.structs)
-    @test all(length(getproperty(api_2, name)) > length(getproperty(api, name)) for name in (:structs, :functions, :aliases, :all_symbols))
+    @test all(length(getproperty(api_2, name)) > length(getproperty(api, name)) for name in (:structs, :functions, :aliases, :symbols))
+    diff = Diff(api, api_2)
+    @test all(!isbreaking, diff.removed)
 
     func = api_2.functions[:vkCmdSetSampleMaskEXT]
     commandBuffer, samples, pSampleMask = func
     @test pSampleMask.len == :((samples + 31) / 32)
     @test samples.arglen == []
+
+    api_3 = VulkanAPI(v"1.3.266")
+    diff = Diff(api_2, api_3)
+    @test all(!isbreaking, diff.removed)
   end
 end;

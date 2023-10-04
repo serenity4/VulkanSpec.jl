@@ -42,7 +42,8 @@ function Base.show(io::IO, ::MIME"text/plain", ext::SpecExtension)
   print(io, ext.name)
   inline_infos = String[]
   ext.is_provisional && push!(inline_infos, "provisional")
-  ext.is_disabled && push!(inline_infos, "disabled")
+  ext.support == EXTENSION_SUPPORT_DISABLED && push!(inline_infos, "disabled")
+  ext.support == EXTENSION_SUPPORT_VULKAN_SC && push!(inline_infos, "Vulkan SC only")
   !isnothing(ext.promoted_to) && push!(inline_infos, "promoted in version $(ext.promoted_to)")
   !isempty(inline_infos) && print(io, " (", join(inline_infos, ", "), ')')
   println(io)
@@ -67,6 +68,16 @@ function Base.show(io::IO, mime::MIME"text/plain", collection::Collection)
   show(io, mime, collection.data)
 end
 
+vulkan_version(api::VulkanAPI) = isnothing(api.version) ? "unknown version" : "version $(api.version)"
+
 function Base.show(io::IO, api::VulkanAPI)
-  print(io, typeof(api), '(' * (isnothing(api.version) ? "unknown version" : "version $(api.version)"), " with ", length(api.structs) + length(api.unions), " types and ", length(api.functions), " functions - ", length(api.all_symbols) + length(api.aliases.dict), " symbols in total, including ", length(api.aliases.dict), " aliases)")
+  print(io, typeof(api), '(' * vulkan_version(api), " with ", length(api.structs) + length(api.unions), " types and ", length(api.functions), " functions - ", length(api.symbols) + length(api.aliases.dict), " symbols in total, including ", length(api.aliases.dict), " aliases)")
+end
+
+Base.show(io::IO, ::MIME"text/plain", removed::RemovedSymbol) = print(io, ':', removed.name, " (", removed.was_provisional ? "provisional" : "BREAKING", ')')
+
+function Base.show(io::IO, mime::MIME"text/plain", diff::Diff)
+  println(io, "Diff from Vulkan (", vulkan_version(diff.old), ") to Vulkan (", vulkan_version(diff.new), "):")
+  println(io, "● Removed symbols: ", sprint(show, mime, diff.removed; context = :limit => true))
+  println(io, "● Added symbols: ", sprint(show, mime, diff.added; context = :limit => true))
 end
