@@ -33,9 +33,9 @@ Base.get(api::VulkanAPI, symbol::Symbol, default) = get(api.symbols_including_al
 download_specification(version::VersionNumber) = download("https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v$version/xml/vk.xml")
 download_specification_video(version::VersionNumber) = download("https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/v$version/xml/video.xml")
 
-function VulkanAPI(version::VersionNumber)
+function VulkanAPI(version::VersionNumber; include_video_api::Bool = true)
   api = VulkanAPI(download_specification(version), version)
-  version < v"1.2.203" && return api
+  (version < v"1.2.203" || !include_video_api) && return api
   video_api = VulkanAPI(download_specification_video(version))
   union!(api.structs, video_api.structs)
   union!(api.enums, video_api.enums)
