@@ -10,6 +10,7 @@ using Vulkan_Headers_jll: vk_xml
 using InteractiveUtils: subtypes
 using BitMasks: @bitmask
 using Dictionaries
+using PrecompileTools
 
 @template (FUNCTIONS, METHODS, MACROS) = """
                                          $(DOCSTRING)
@@ -90,6 +91,14 @@ end
 for sym in names(@__MODULE__, all = true)
   if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "EXTENSION_", "Spec", "Queue", "RenderPass"])
     @eval export $sym
+  end
+end
+
+@compile_workload begin
+  api = VulkanAPI(joinpath(pkgdir(@__MODULE__), "vk.xml"))
+  for collection in (api.extensions, api.functions, api.structs, api.authors, api)
+    sprint(show, collection)
+    sprint(show, MIME"text/plain"(), collection)
   end
 end
 
