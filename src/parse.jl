@@ -5,6 +5,7 @@ const queue_map = dictionary([
     :sparse_binding => QueueSparseBinding(),
     :decode => QueueVideoDecode(),
     :encode => QueueVideoEncode(),
+    :opticalflow => QueueOpticalFlow(),
 ])
 
 const render_pass_compatibility_map = dictionary([
@@ -228,22 +229,19 @@ end
 externsync(node::Node) = haskey(node, "externsync") && node["externsync"] ≠ "false"
 
 function len(node::Node)
-  @match node begin
-    _ && if haskey(node, "altlen")
-    end => Meta.parse(node["altlen"])
-    _ => @match getattr(node, "len", symbol = false) begin
-      val::Nothing => nothing
-      val => begin
-        val_arr = filter(≠("null-terminated"), split(val, ','))
-        if length(val_arr) > 1
-          if length(last(val_arr)) == 1 && isdigit(first(last(val_arr))) # array of pointers, length is unaffected
-            pop!(val_arr)
-          else
-            error("Failed to parse 'len' parameter '$val' for $(node.parentnode["name"]).")
-          end
+  haskey(node, "altlen") && return Meta.parse(node["altlen"])
+  @match getattr(node, "len", symbol = false) begin
+    val::Nothing => nothing
+    val => begin
+      val_arr = filter(≠("null-terminated"), split(val, ','))
+      if length(val_arr) > 1
+        if length(last(val_arr)) == 1 && isdigit(first(last(val_arr))) # array of pointers, length is unaffected
+          pop!(val_arr)
+        else
+          error("Failed to parse 'len' parameter '$val' for $(node.parentnode["name"]).")
         end
-        isempty(val_arr) ? nothing : Symbol(first(val_arr))
       end
+      isempty(val_arr) ? nothing : Symbol(first(val_arr))
     end
   end
 end

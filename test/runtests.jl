@@ -451,4 +451,16 @@ using Test
       end
     end
   end
+
+  @testset "New specification features/structure" begin
+    api_2 = VulkanAPI(v"1.3.240")
+    @test isa(api_2, VulkanAPI)
+    @test length(api_2.structs) > 100 + length(api.structs)
+    @test all(length(getproperty(api_2, name)) > length(getproperty(api, name)) for name in (:structs, :functions, :aliases, :all_symbols))
+
+    func = api_2.functions[:vkCmdSetSampleMaskEXT]
+    commandBuffer, samples, pSampleMask = func
+    @test pSampleMask.len == :((samples + 31) / 32)
+    @test samples.arglen == []
+  end
 end;

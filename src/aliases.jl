@@ -38,6 +38,7 @@ function Base.get(default, aliases::Aliases, name::Symbol)
 end
 Base.get(aliases::Aliases, name::Symbol, value) = get(Returns(value), aliases, name)
 Base.getindex(aliases::Aliases, name::Symbol) = get(() -> throw(KeyError(name)), aliases, name)
+Base.length(aliases::Aliases) = length(aliases.dict)
 
 function follow_alias(index::Integer, aliases::Aliases)
   indices = inneighbors(aliases.graph, index)

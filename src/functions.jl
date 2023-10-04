@@ -9,6 +9,7 @@ struct QueueTransfer <: QueueType end
 struct QueueSparseBinding <: QueueType end
 struct QueueVideoDecode <: QueueType end
 struct QueueVideoEncode <: QueueType end
+struct QueueOpticalFlow <: QueueType end
 
 """
 Render pass execution specification for commands.
@@ -56,8 +57,8 @@ struct SpecFuncParam <: Spec
   is_externsync::Bool
   "[`PARAM_REQUIREMENT`](@ref) classification."
   requirement::PARAM_REQUIREMENT
-  "Name of the parameter (of the same function) which represents its length. `Nothing` for non-vector types."
-  len::Optional{Symbol}
+  "Name of the parameter (of the same function) which represents its length. `Nothing` for non-vector types. Can be an expression of a parameter."
+  len::Optional{ExprLike}
   "Name of the parameters (of the same function) it is a length of."
   arglen::Vector{Symbol}
   "Whether automatic validity documentation is enabled. If false, this means that the parameter may be an exception to at least one Vulkan convention."
