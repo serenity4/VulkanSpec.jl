@@ -18,12 +18,12 @@ struct VulkanAPI
   constructors::Constructors
   destructors::Destructors
   aliases::Aliases
-  structure_types::Dict{Symbol,Symbol}
+  structure_types::Dictionary{Symbol,Symbol}
   core_functions::Vector{Symbol}
   instance_functions::Vector{Symbol}
   device_functions::Vector{Symbol}
   "All symbols defined by the API, excluding aliases."
-  all_symbols::Dict{Symbol, Spec}
+  all_symbols::Dictionary{Symbol, Spec}
 end
 
 function VulkanAPI(version::VersionNumber)
@@ -101,7 +101,7 @@ function VulkanAPI(xml::Document, version = nothing)
     aliases,
     structure_types,
     classify_functions(functions, aliases, handles)...,
-    Dict(name.(all_specs) .=> all_specs),
+    sortkeys!(Dictionary(name.(all_specs), all_specs)),
   )
 end
 
@@ -109,7 +109,7 @@ function classify_functions(functions::Functions, aliases::Aliases, handles::Han
   core_functions = Symbol[]
   instance_functions = Symbol[]
   device_functions = Symbol[]
-  for fname in unique!([functions.name; [x for (x, alias) in aliases.dict if haskey(functions, alias)]])
+  for fname in unique!([functions.name; [x for (x, alias) in pairs(aliases.dict) if haskey(functions, alias)]])
     spec = functions[follow_alias(fname, aliases)]
     t = follow_alias(spec.params[1], aliases)
     h = get(handles, t.type, nothing)

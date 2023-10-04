@@ -1,17 +1,17 @@
-const queue_map = Dict(
+const queue_map = dictionary([
     :compute => QueueCompute(),
     :graphics => QueueGraphics(),
     :transfer => QueueTransfer(),
     :sparse_binding => QueueSparseBinding(),
     :decode => QueueVideoDecode(),
     :encode => QueueVideoEncode(),
-)
+])
 
-const render_pass_compatibility_map = Dict(
+const render_pass_compatibility_map = dictionary([
     :both => [RenderPassInside(), RenderPassOutside()],
     :inside => [RenderPassInside()],
     :outside => [RenderPassOutside()],
-)
+])
 
 function SpecStructMember(node::Node, parent::SpecStruct)
     SpecStructMember(
@@ -316,13 +316,13 @@ end
 
 function parse_structure_types(xml)
   stype_vals = findall("//member[@values]", xml)
-  res = Dict()
+  res = Dictionary{Symbol,Symbol}()
   for stype ∈ stype_vals
     type = stype.parentnode["name"]
     stype_value = stype["values"]
-    res[Symbol(type)] = Symbol(stype_value)
+    insert!(res, Symbol(type), Symbol(stype_value))
   end
-  res
+  sortkeys!(res)
 end
 
 nodes(::Type{SpecPlatform}, xml::Document) = findall("//platform", xml)

@@ -9,16 +9,17 @@ struct SpecAlias{S<:Spec} <: Spec
 end
 
 struct Aliases
-  dict::Dict{Symbol,Symbol}
+  dict::Dictionary{Symbol,Symbol}
   verts::Vector{Symbol}
   graph::SimpleDiGraph{Int64}
 end
 
 function Aliases(xml::Document)
-  dict = Dict(Symbol(alias["name"]) => Symbol(alias["alias"]) for alias ∈ findall("//*[@alias and not(@feature)]", xml))
+  dict = dictionary(Symbol(alias["name"]) => Symbol(alias["alias"]) for alias ∈ findall("//*[@alias and not(@feature)]", xml))
+  sortkeys!(dict)
   verts = unique(vcat(collect(keys(dict)), collect(values(dict))))
   graph = SimpleDiGraph(length(verts))
-  for (j, (src, dst)) ∈ enumerate(dict)
+  for (j, (src, dst)) ∈ enumerate(pairs(dict))
     i = findfirst(==(dst), verts)
     add_edge!(graph, i, j)
   end
