@@ -24,6 +24,7 @@ EzXML = "1"
 ForwardMethods = "1"
 Graphs = "1"
 MLStyle = "0.4"
+PrecompileTools = "1"
 StructArrays = "0.6"
 julia = "1.7"
 
