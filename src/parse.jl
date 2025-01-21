@@ -264,7 +264,7 @@ function SpecExtensionSPIRV(node::Node)
 end
 
 function version_number(str::AbstractString)
-  m = match(r"VK_VERSION(?:_API)?_(\d+)_(\d+)", str)
+  m = match(r"VK(?:_API)?_VERSION_(\d+)_(\d+)", str)
   isnothing(m) && return nothing
   VersionNumber(parse(Int, m.captures[1]), parse(Int, m.captures[2]))
 end

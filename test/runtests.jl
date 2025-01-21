@@ -426,7 +426,7 @@ using Test
 
       name = :StorageImageReadWithoutFormat
       capability = api.capabilities_spirv[name]
-      @test api.capabilities_spirv[name] == SpecCapabilitySPIRV(name, nothing, ["VK_KHR_format_feature_flags2"], [FeatureCondition(:VkPhysicalDeviceFeatures, :shaderStorageImageReadWithoutFormat, nothing, nothing)], [])
+      @test api.capabilities_spirv[name] == SpecCapabilitySPIRV(name, v"1.3", ["VK_KHR_format_feature_flags2"], [FeatureCondition(:VkPhysicalDeviceFeatures, :shaderStorageImageReadWithoutFormat, nothing, nothing)], [])
 
       name = :GroupNonUniform
       capability = api.capabilities_spirv[name]
