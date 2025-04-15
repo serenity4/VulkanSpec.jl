@@ -104,7 +104,8 @@ function VulkanAPI(xml::Document, version = nothing)
     (bitmasks.combinations...)...
   ]
   symbols = sortkeys!(Dictionary(name.(all_specs), all_specs))
-  symbols_including_aliases = sortkeys!(merge!(dictionary([name => symbols[follow_alias(name, aliases)] for name in keys(aliases.dict) if !in(name, disabled_symbols)]), symbols))
+  symbol_aliases = get_symbol_aliases(aliases, symbols, disabled_symbols)
+  symbols_including_aliases = sortkeys!(merge!(symbol_aliases, symbols))
 
   structure_types = parse_structure_types(xml)
   VulkanAPI(
@@ -131,6 +132,17 @@ function VulkanAPI(xml::Document, version = nothing)
     symbols,
     symbols_including_aliases,
   )
+end
+
+function get_symbol_aliases(aliases, symbols, disabled_symbols)
+  names = Symbol[]
+  specs = Spec[]
+  for name in keys(aliases.dict)
+    in(name, disabled_symbols) && continue
+    push!(names, name)
+    push!(specs, symbols[follow_alias(name, aliases)])
+  end
+  Dictionary(names, specs)
 end
 
 function classify_functions(functions::Functions, aliases::Aliases, handles::Handles)

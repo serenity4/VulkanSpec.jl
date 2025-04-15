@@ -42,20 +42,31 @@ name(create::CreateFunc) = name(create.func)
 
 function CreateFunc(spec::SpecFunc, handles::Handles, structs::Structs, aliases::Aliases)
   created_param = last(spec.params)
-  handle = handles[follow_alias(innermost_type(created_param.type), aliases)]
+  t = follow_alias(innermost_type(created_param.type), aliases)
+  batch = nothing
+  handle = get(handles, t) do
+    # `vkCreatePipelineBinariesKHR` accepts a `VkPipelineBinaryHandlesInfoKHR`
+    # struct parameter to hold the created handles; it is batched but that parameter
+    # is not an array directly so we need more effort to identify what handle type is created
+    s = get(structs, t, nothing)
+    isnothing(s) && error("Last parameter of create function `$(spec.name)` with innermost type `$t` could not be found in handles or structs")
+    i = findall(param -> haskey(handles, innermost_type(param.type)), children(s))
+    isnothing(i) && error("Struct parameter assumed to be created by `$(spec.name)` does not contain any handles")
+    length(i) > 1 && error("Struct parameter assumed to be created by `$(spec.name)` contains more than one handle type")
+    param = s[i[]]
+    batch = !isnothing(param.len)
+    handles[follow_alias(innermost_type(param.type), aliases)]
+  end
   create_info_params = [spec.params[i] for i in findall(spec.params.type) do x
     type = get(structs, innermost_type(x), nothing)
     !isnothing(type) && iscreateinfo(type)
   end]
   @assert length(create_info_params) <= 1 "Found $(length(create_info_params)) create info types from the parameters of $spec:\n    $create_info_params"
-  if length(create_info_params) == 0
-    CreateFunc(spec, handle, nothing, nothing, false)
-  else
-    create_info_param = first(create_info_params)
-    create_info_struct = structs[innermost_type(create_info_param.type)]
-    batch = is_arr(created_param)
-    CreateFunc(spec, handle, create_info_struct, create_info_param, batch)
-  end
+  length(create_info_params) == 0 && return CreateFunc(spec, handle, nothing, nothing, false)
+  create_info_param = first(create_info_params)
+  create_info_struct = structs[innermost_type(create_info_param.type)]
+  batch = @something(batch, is_arr(created_param))
+  CreateFunc(spec, handle, create_info_struct, create_info_param, batch)
 end
 
 "API handle constructors."
