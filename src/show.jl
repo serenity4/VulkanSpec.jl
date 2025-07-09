@@ -76,7 +76,7 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", symbol::SymbolInfo)
   color = (104, 179, 116)[Int(symbol.type)]
   printstyled(io, symbol.name; color)
-  symbol.deprecated && print(io, " (deprecated)"; color = :light_black)
+  symbol.deprecated && printstyled(io, " (deprecated)"; color = :light_black)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", collection::Collection)

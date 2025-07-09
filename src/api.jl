@@ -192,42 +192,43 @@ function classify_functions!(api::VulkanAPI)
   return api
 end
 
-function filter_applicable_symbols(api::VulkanAPI)
+function filter_applicable_symbols(api::VulkanAPI; exclude_extensions = String[])
   vulkan_version_sets = filter(x -> in(VULKAN, x.applicable), api.sets)
   version = @something(api.version, vulkan_version_sets[end].version)
   symbols = Symbol[]
   for set in vulkan_version_sets[1:(1 + version.minor)]
     append!(symbols, defined_symbols(set))
   end
+  extensions = SpecExtension[]
   for extension in api.extensions
     in(VULKAN, extension.applicable) || continue
+    in(extension.name, exclude_extensions) && continue
+    groups = SymbolGroup[]
     for group in extension.groups
       isempty(group.applicable) || in(VULKAN, group.applicable) || continue
       append!(symbols, defined_symbols(group))
+      push!(groups, @set group.applicable = ApplicableAPI[])
     end
+    push!(extensions, setproperties(extension, (; groups, applicable = [VULKAN])))
   end
   for symbol in symbols
     isalias(symbol, api.aliases) && push!(symbols, follow_alias(symbol, api.aliases))
   end
-  return trim_for_symbols(api, Set(symbols), version)
+  return trim_for_symbols(api, Set(symbols), Extensions(extensions), version)
 end
 
-function trim_for_symbols(from::VulkanAPI, symbols, version)
+function trim_for_symbols(from::VulkanAPI, symbols, extensions, version)
   api = VulkanAPI(from.applicable, version)
   api.platforms = copy(from.platforms)
   api.authors = copy(from.authors)
   api.extensions_spirv = copy(from.extensions_spirv)
   api.capabilities_spirv = copy(from.capabilities_spirv)
+  api.extensions = extensions
 
   api.sets = filter(deepcopy(from.sets)) do set
     in(VULKAN, set.applicable) || return false
     filter!(x -> in(VULKAN, x.applicable), set.groups)
     return !isempty(set)
-  end
-  api.extensions = filter(deepcopy(from.extensions)) do extension
-    in(VULKAN, extension.applicable) || return false
-    filter!(x -> in(VULKAN, x.applicable), extension.groups)
-    return !isempty(extension.groups)
   end
   api.structs = filter(in(symbols) ∘ name, from.structs)
   api.unions = filter(in(symbols) ∘ name, from.unions)
@@ -235,13 +236,13 @@ function trim_for_symbols(from::VulkanAPI, symbols, version)
   api.enums = filter(deepcopy(from.enums)) do enum
     in(name(enum), symbols) || return false
     filter!(in(symbols) ∘ name, enum.enums)
-    return !isempty(enum.enums)
+    return true
   end
   api.bitmasks = filter(deepcopy(from.bitmasks)) do bitmask
     in(name(bitmask), symbols) || return false
     filter!(in(symbols) ∘ name, bitmask.bits)
     filter!(in(symbols) ∘ name, bitmask.combinations)
-    return !isempty(bitmask.bits)
+    return true
   end
   api.flags = filter(in(symbols) ∘ name, from.flags)
   api.constants = filter(in(symbols) ∘ name, from.constants)
@@ -270,7 +271,6 @@ function trim_structure_types(from::VulkanAPI, symbols)
   structure_types = Dictionary{Symbol,Symbol}()
   for (sname, stype) in pairs(from.structure_types)
     in(sname, symbols) || continue
-    in(stype, symbols) || continue
     insert!(structure_types, sname, stype)
   end
   return structure_types

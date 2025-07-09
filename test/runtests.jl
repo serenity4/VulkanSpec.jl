@@ -510,6 +510,7 @@ using Test
     @test !haskey(trimmed.enums, :VkFaultLevel)
     @test haskey(trimmed.flags, :VkPipelineCacheCreateFlags)
     @test length(trimmed.structure_types) > 900
+    @test length(trimmed.extensions) > 400
     @test all(trimmed.capabilities_spirv .== api.capabilities_spirv)
     @test all(trimmed.extensions_spirv .== api.extensions_spirv)
   end

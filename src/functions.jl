@@ -10,6 +10,7 @@ struct QueueSparseBinding <: QueueType end
 struct QueueVideoDecode <: QueueType end
 struct QueueVideoEncode <: QueueType end
 struct QueueOpticalFlow <: QueueType end
+struct QueueDataGraph <: QueueType end
 
 """
 Render pass execution specification for commands.

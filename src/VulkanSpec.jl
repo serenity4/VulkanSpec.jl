@@ -10,6 +10,7 @@ using Vulkan_Headers_jll: vk_xml
 using InteractiveUtils: subtypes
 using BitMasks: @bitmask
 using Dictionaries
+using Accessors: @set, setproperties
 using PrecompileTools
 
 @template (FUNCTIONS, METHODS, MACROS) = """

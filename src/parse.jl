@@ -6,6 +6,7 @@ const queue_map = dictionary([
     :decode => QueueVideoDecode(),
     :encode => QueueVideoEncode(),
     :opticalflow => QueueOpticalFlow(),
+    :data_graph => QueueDataGraph(),
 ])
 
 const render_pass_compatibility_map = dictionary([
@@ -50,12 +51,12 @@ function SpecStruct(node::Node)
         type,
         returnedonly,
         extends,
-        findall("./member", node),
+        findall("./member[$api_selector]", node),
     )
 end
 
 function SpecUnion(node::Node)
-    members = findall("./member", node)
+    members = findall("./member[$api_selector]", node)
     selectors = getattr.(members, "selection")
     SpecUnion(
         getattr(node, "name"),
@@ -320,7 +321,7 @@ function parse_structure_types(xml)
   sortkeys!(res)
 end
 
-api_selector::String = "(not(@api) or @api = vulkan)"
+api_selector::String = "(not(@api) or @api = \"vulkan\")"
 
 nodes(::Type{SpecPlatform}, xml::Document)        = findall("/registry/platforms/platform", xml)
 nodes(::Type{AuthorTag}, xml::Document)           = findall("/registry/tags/tag", xml)

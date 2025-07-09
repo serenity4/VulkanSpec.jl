@@ -109,6 +109,7 @@ end
   PLATFORM_SCREEN      = 1 << 13
   PLATFORM_PROVISIONAL = 1 << 14
   PLATFORM_SCI         = 1 << 15
+  PLATFORM_OHOS        = 1 << 16
 end
 
 "API platforms."
@@ -150,6 +151,7 @@ struct Extensions <: Collection{SpecExtension}
 end
 
 Extensions(xml::Document) = Extensions(SpecExtension.(findall("//extension", xml)))
+Base.in(name::String, extensions::Extensions) = any(x -> x.name == name, extensions)
 
 iscore(spec, extensions::Extensions) = !haskey(extensions, spec)
 function is_platform_specific(x, extensions::Extensions)
