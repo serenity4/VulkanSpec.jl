@@ -82,3 +82,5 @@ function innermost_type(t)
         _ => error("Cannot take innermost type of $t")
     end
 end
+
+sprintcm(f, x) = sprint(f, MIME"text/plain"(), x; context = :color => true)

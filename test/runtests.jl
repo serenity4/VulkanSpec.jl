@@ -1,4 +1,5 @@
 using VulkanSpec
+using VulkanSpec: VULKAN, VULKAN_SC
 using StructArrays
 using Test
 
@@ -21,20 +22,39 @@ using Test
     @test extension.requirements == ["VK_KHR_surface"]
     @test extension.author == "KHR"
     @test extension.type == EXTENSION_TYPE_DEVICE
-    @test length(extension.symbols) == 38
-    @test :vkCreateSwapchainKHR in extension.symbols
-    @test :VkSwapchainCreateInfoKHR in extension.symbols
+    symbols = defined_symbols(extension)
+    @test length(symbols) == 38
+    @test :vkCreateSwapchainKHR in symbols
+    @test :VkSwapchainCreateInfoKHR in symbols
 
     name = "VK_IMG_filter_cubic"
-    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_DEVICE, [], EXTENSION_SUPPORT_VULKAN, "IMG", [
-        :VK_IMG_FILTER_CUBIC_SPEC_VERSION, :VK_IMG_FILTER_CUBIC_EXTENSION_NAME, :VK_FILTER_CUBIC_IMG, :VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG
-      ], PLATFORM_NONE, false, nothing, nothing)
+    extension = api.extensions[name]
+    @test extension.name == name
+    @test extension.type === EXTENSION_TYPE_DEVICE
+    @test extension.requirements == []
+    @test extension.applicable == [VULKAN]
+    @test extension.author == "IMG"
+    @test length(extension.groups) === 1
+    @test defined_symbols(extension) == [:VK_IMG_FILTER_CUBIC_SPEC_VERSION, :VK_IMG_FILTER_CUBIC_EXTENSION_NAME, :VK_FILTER_CUBIC_IMG, :VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG]
+    @test extension.platform == PLATFORM_NONE
+    @test extension.is_provisional === false
+    @test extension.promoted_to === nothing
+    @test extension.deprecated_by === nothing
+    @test extension.disabled === false
 
     name = "VK_KHR_mir_surface"
-    @test api.extensions[name] == SpecExtension(name, EXTENSION_TYPE_INSTANCE, ["VK_KHR_surface"], EXTENSION_SUPPORT_DISABLED, "KHR", [
-        :VK_KHR_MIR_SURFACE_SPEC_VERSION,
-        :VK_KHR_MIR_SURFACE_EXTENSION_NAME,
-      ], PLATFORM_NONE, false, nothing, nothing)
+    extension = api.extensions[name]
+    @test extension.name == name
+    @test extension.type == EXTENSION_TYPE_INSTANCE
+    @test extension.requirements == ["VK_KHR_surface"]
+    @test extension.author == "KHR"
+    @test length(extension.groups) == 1
+    @test defined_symbols(extension) == [:VK_KHR_MIR_SURFACE_SPEC_VERSION, :VK_KHR_MIR_SURFACE_EXTENSION_NAME,]
+    @test extension.disabled === true
+    @test extension.platform == PLATFORM_NONE
+    @test extension.is_provisional == false
+    @test extension.promoted_to == nothing
+    @test extension.deprecated_by == nothing
 
     name = "VK_EXT_debug_report"
     extension = api.extensions[name]

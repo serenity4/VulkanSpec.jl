@@ -1,7 +1,5 @@
-@enum VulkanAPISubset VULKAN_API VULKAN_API_SC
-
 mutable struct VulkanAPI
-  const subset::VulkanAPISubset
+  const applicable::ApplicableAPI
   const version::Optional{VersionNumber}
   platforms::Platforms
   authors::Authors
@@ -28,7 +26,7 @@ mutable struct VulkanAPI
   "Symbols defined by the API, excluding aliases."
   symbols::Dictionary{Symbol, Spec}
   symbols_including_aliases::Dictionary{Symbol, Spec}
-  VulkanAPI(subset::VulkanAPISubset, version::Optional{VersionNumber}) = new(subset, version)
+  VulkanAPI(subset::ApplicableAPI, version::Optional{VersionNumber}) = new(subset, version)
 end
 
 Base.getindex(api::VulkanAPI, symbol::Symbol) = api.symbols_including_aliases[symbol]
@@ -59,7 +57,7 @@ end
 VulkanAPI(xml_file::AbstractString, version = infer_version_from_filename(xml_file)) = VulkanAPI(readxml(xml_file), version)
 
 function VulkanAPI(xml::Document, version = nothing)
-  api = VulkanAPI(VULKAN_API, version)
+  api = VulkanAPI(VULKAN, version)
   parse_specification_data!(api, xml)
   extend_enums_and_bitmasks!(api, xml)
   generate_constructors_and_destructors!(api)
@@ -72,7 +70,7 @@ function parse_specification_data!(api::VulkanAPI, xml::Document)
   api.platforms = Platforms(xml)
   api.authors = Authors(xml)
   api.extensions = extensions = Extensions(xml)
-  api.disabled_symbols = Set(foldl(append!, extensions[.!in.(EXTENSION_SUPPORT_VULKAN, extensions.support)].symbols; init = Symbol[]))
+  api.disabled_symbols = Set(foldl(append!, defined_symbols.(extensions[.!in.(VULKAN, extensions.applicable)]); init = Symbol[]))
   api.aliases = Aliases(xml)
   api.extensions_spirv = ExtensionsSPIRV(xml)
   api.capabilities_spirv = CapabilitiesSPIRV(xml)

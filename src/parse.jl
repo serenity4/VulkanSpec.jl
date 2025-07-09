@@ -198,25 +198,24 @@ function SpecExtension(node::Node)
   requires = getattr(node, "requires", default = "", symbol = false)
   requirements = isempty(requires) ? String[] : split(requires, ',')
   supported = split(node["supported"], ',')
-  support = EXTENSION_SUPPORT_DISABLED
-  in("vulkan", supported) && (support |= EXTENSION_SUPPORT_VULKAN)
-  in("vulkansc", supported) && (support |= EXTENSION_SUPPORT_VULKAN_SC)
-  in("disabled", supported) && (support = EXTENSION_SUPPORT_DISABLED)
+  applicable = parse_applicable_apis(supported)
+  disabled = in("disabled", supported)
   unknown = filter(!in(("vulkan", "vulkansc", "disabled")), supported)
   !isempty(unknown) && error("Unknown extension support value(s) $(join('`' .* string.(unknown) .* '`', ", "))")
   platform = PlatformType(getattr(node, "platform", symbol = false))
-  symbols = map(x -> getattr(x, "name"), findall(".//*[@name]", node))
+  groups = SymbolGroup.(findall("./require", node))
   promoted_to = getattr(node, "promotedto", symbol = false)
   promoted_to = something(version_number(promoted_to), promoted_to, Some(nothing))
   SpecExtension(
     node["name"],
     exttype,
     requirements,
-    support,
+    applicable,
     getattr(node, "author", symbol = false),
-    symbols,
+    groups,
     platform,
     platform == PLATFORM_PROVISIONAL,
+    disabled,
     promoted_to,
     getattr(node, "deprecatedby", symbol = false),
   )

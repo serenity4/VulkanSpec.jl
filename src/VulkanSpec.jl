@@ -99,8 +99,9 @@ end
   api = VulkanAPI(joinpath(pkgdir(@__MODULE__), "specs", "vk.1.3.207.xml"))
   for collection in (api.extensions, api.functions, api.structs, api.authors, api)
     sprint(show, collection)
-    sprint(show, MIME"text/plain"(), collection)
+    sprintcm(show, collection)
   end
+  sprintcm(api.extensions[2])
 end
 
 export
@@ -133,6 +134,8 @@ export
   # API
   VulkanAPI,
   Diff, RemovedSymbol, isbreaking,
+  SymbolType, SYMBOL_TYPE, SYMBOL_ENUM, SYMBOL_COMMAND, SymbolInfo,
+  SymbolGroup, defined_symbols,
 
   # Alias manipulation
   alias_dict,

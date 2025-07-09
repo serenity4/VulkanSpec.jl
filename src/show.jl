@@ -33,7 +33,7 @@ function Base.show(io::IO, spec::SpecFunc)
   print_children(io, spec)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ext::SpecExtension)
+function Base.show(io::IO, mime::MIME"text/plain", ext::SpecExtension)
   @match ext.type begin
     &EXTENSION_TYPE_INSTANCE => print(io, "Instance extension ")
     &EXTENSION_TYPE_DEVICE => print(io, "Device extension ")
@@ -42,25 +42,32 @@ function Base.show(io::IO, ::MIME"text/plain", ext::SpecExtension)
   print(io, ext.name)
   inline_infos = String[]
   ext.is_provisional && push!(inline_infos, "provisional")
-  ext.support == EXTENSION_SUPPORT_DISABLED && push!(inline_infos, "disabled")
-  ext.support == EXTENSION_SUPPORT_VULKAN_SC && push!(inline_infos, "Vulkan SC only")
+  ext.disabled && push!(inline_infos, "disabled")
+  ext.applicable == [VULKAN_SC] && push!(inline_infos, "Vulkan SC only")
   !isnothing(ext.promoted_to) && push!(inline_infos, "promoted in version $(ext.promoted_to)")
   !isempty(inline_infos) && print(io, " (", join(inline_infos, ", "), ')')
-  println(io)
-  ext.platform ∉ (PLATFORM_NONE, PLATFORM_PROVISIONAL) && println(io, "• Platform: ", replace(string(ext.platform), "PLATFORM_" => ""))
-  !isempty(ext.requirements) && println(io, "• Depends on: ", join(ext.requirements, ", "))
-  n = length(ext.symbols)
+  ext.platform ∉ (PLATFORM_NONE, PLATFORM_PROVISIONAL) && print(io, "\n• Platform: ", replace(string(ext.platform), "PLATFORM_" => ""))
+  !isempty(ext.requirements) && print(io, "\n• Depends on: ", join(ext.requirements, ", "))
+  n = length(ext.groups)
   if n > 0
-    println(io, "• $n symbols: ")
-    limit = 8
-    foreach(enumerate(sort(ext.symbols))) do (i, symbol)
-      (i ≤ limit / 2 || i > n - limit ÷ 2) && (i == n ? print : println)(io, "  ∘ ", symbol)
-      i == limit ÷ 2 && println(io, "  ⋮")
+    print(io, "\n• $n symbol groups: ")
+    for (i, group) in enumerate(ext.groups)
+      print(io, "\n  ", something(group.description, "Group #$i"))
+      for symbol in group.symbols
+        print(io, "\n  ∘ ")
+        show(io, mime, symbol)
+      end
     end
   end
   if !isnothing(ext.author)
     print(io, "\n• From: ", ext.author)
   end
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", symbol::SymbolInfo)
+  color = (104, 179, 116)[Int(symbol.type)]
+  printstyled(io, symbol.name; color)
+  symbol.deprecated && print(io, " (deprecated)"; color = :light_black)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", collection::Collection)

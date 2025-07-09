@@ -1,3 +1,59 @@
+"Describes which type of Vulkan API the specification applies to."
+@enum ApplicableAPI VULKAN VULKAN_SC
+@doc "Standard Vulkan." VULKAN
+@doc "Vulkan SC, for safety-critical systems." VULKAN_SC
+
+@enum SymbolType SYMBOL_ENUM = 1 SYMBOL_TYPE = 2 SYMBOL_COMMAND = 3
+
+function SymbolType(node::Node)
+  name = Symbol(node.name)
+  name === :enum && return SYMBOL_ENUM
+  name === :type && return SYMBOL_TYPE
+  name === :command && return SYMBOL_COMMAND
+  error("Unknown symbol type '$name'")
+end
+
+struct SymbolInfo
+  name::Symbol
+  type::SymbolType
+  deprecated::Bool
+end
+
+struct SymbolGroup
+  applicable::Vector{ApplicableAPI}
+  symbols::Vector{SymbolInfo}
+  depends_on::Vector{String}
+  description::Optional{String}
+end
+
+Base.contains(group::SymbolGroup, symbol::Symbol) = any(x -> x.name === symbol, group.symbols)
+Base.in(symbol::Symbol, group::SymbolGroup) = contains(group, symbol)
+
+parse_applicable_apis(node::Node) = parse_applicable_apis(split(getattr(node, "api"; default = "", symbol = false)))
+
+function parse_applicable_apis(list::AbstractVector)
+  applicable = ApplicableAPI[]
+  in("vulkan", list) && push!(applicable, VULKAN)
+  in("vulkansc", list) && push!(applicable, VULKAN_SC)
+  return applicable
+end
+
+function SymbolGroup(node::Node)
+  applicable = parse_applicable_apis(node)
+  symbols = SymbolInfo[]
+  for child in findall("./*[self::enum or self::type or self::command]", node)
+    name = getattr(child, "name")
+    type = SymbolType(child)
+    deprecated = haskey(child, "deprecated") && in(child["deprecated"], ("true", "aliased"))
+    push!(symbols, SymbolInfo(name, type, deprecated))
+  end
+  depends_on = split(getattr(node, "depends_on"; default = "", symbol = false), ',')
+  description = getattr(node, "comment"; default = nothing, symbol = false)
+  SymbolGroup(applicable, symbols, depends_on, description)
+end
+
+defined_symbols(group::SymbolGroup) = map(x -> x.name, group.symbols)
+
 @enum ExtensionType begin
   EXTENSION_TYPE_INSTANCE
   EXTENSION_TYPE_DEVICE
@@ -36,31 +92,26 @@ struct Platforms <: Collection{SpecPlatform}
   data::data_type(SpecPlatform)
 end
 
-"Describes what type of support an extension has per the specification."
-@bitmask exported = true ExtensionSupport::UInt32 begin
-  "Disabled."
-  EXTENSION_SUPPORT_DISABLED = 1 << 0
-  "Standard Vulkan."
-  EXTENSION_SUPPORT_VULKAN = 1 << 1
-  "Vulkan SC, for safety-critical systems."
-  EXTENSION_SUPPORT_VULKAN_SC = 1 << 2
-end
-
 struct SpecExtension <: Spec
   name::String
   type::ExtensionType
   requirements::Vector{String}
-  support::ExtensionSupport
+  applicable::Vector{ApplicableAPI}
   author::Optional{String}
-  symbols::Vector{Symbol}
+  groups::Vector{SymbolGroup}
   platform::PlatformType
   is_provisional::Bool
+  disabled::Bool
   "Core version or core extension which this extension was promoted to, if promoted."
   promoted_to::Optional{Union{VersionNumber,String}}
   deprecated_by::Optional{String}
 end
 
-matches(name::Symbol, x::SpecExtension) = name == x.name || name in x.symbols
+Base.contains(extension::SpecExtension, symbol::Symbol) = any(contains(symbol), extension.groups)
+Base.in(symbol::Symbol, extension::SpecExtension) = contains(extension, symbol)
+defined_symbols(extension::SpecExtension) = foldl((x, y) -> append!(x, defined_symbols(y)), extension.groups; init = Symbol[])
+
+matches(name::Symbol, x::SpecExtension) = name == x.name || contains(x, name)
 
 "API extensions."
 struct Extensions <: Collection{SpecExtension}
@@ -77,7 +128,11 @@ function is_platform_specific(x, extensions::Extensions)
 end
 
 "Return whether an extension is enabled for standard Vulkan - that is, a given symbol `x` is either core or is from an extension that has not been disabled, or is not exclusive to Vulkan SC."
-isenabled(x, extensions::Extensions) = iscore(x, extensions) || EXTENSION_SUPPORT_VULKAN in extensions[x].support
+function isenabled(x, extensions::Extensions)
+  iscore(x, extensions) && return true
+  extension = extensions[x]
+  !extension.disabled && in(VULKAN, extension.applicable)
+end
 
 struct AuthorTag <: Spec
   tag::String
