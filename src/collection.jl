@@ -40,7 +40,7 @@ end
 matches(_key, x) = _key == key(x)
 data_type(::Type{T}) where {T} = StructVector{T, structvector_fields(T), Int64}
 
-@generated function structvector_fields(::Type{T}) where {T<:Spec}
+@generated function structvector_fields(::Type{T}) where {T}
   fields = Expr[]
   for (name, t) in zip(fieldnames(T), fieldtypes(T))
     push!(fields, :($name::Vector{$t}))

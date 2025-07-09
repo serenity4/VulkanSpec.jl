@@ -344,3 +344,4 @@ function nodes(::Type{SpecAlias}, xml::Document)
     parent.name ≠ "extension" || getattr(parent, "supported") ≠ :disabled
   end
 end
+nodes(::Type{SymbolSet}, xml::Document) = findall("//feature[@api]", xml)

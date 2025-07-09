@@ -52,6 +52,7 @@ function Base.show(io::IO, mime::MIME"text/plain", ext::SpecExtension)
   if n > 0
     print(io, "\n• $n symbol groups: ")
     for (i, group) in enumerate(ext.groups)
+      i > 1 && println(io)
       print(io, "\n  ", something(group.description, "Group #$i"))
       for symbol in group.symbols
         print(io, "\n  ∘ ")
@@ -61,6 +62,14 @@ function Base.show(io::IO, mime::MIME"text/plain", ext::SpecExtension)
   end
   if !isnothing(ext.author)
     print(io, "\n• From: ", ext.author)
+  end
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", set::SymbolSet)
+  print(io, "Symbol set '", set.name, "' with ", length(set), " symbol groups:")
+  for (i, group) in enumerate(set)
+    print(io, "\n  ", something(group.description, "Group #$i"))
+    printstyled(io, " (", length(group), " symbols)"; color = :light_black)
   end
 end
 

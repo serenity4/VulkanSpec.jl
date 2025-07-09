@@ -70,6 +70,30 @@ using Test
     @test extension.requirements == ["VK_KHR_get_physical_device_properties2", "VK_KHR_sampler_ycbcr_conversion"]
   end
 
+  @testset "Symbol sets" begin
+    @test length(api.sets) ≥ 4
+    set = api.sets[1]
+    @test set.name === :VK_VERSION_1_0
+    @test set.version === v"1.0"
+    @test set.applicable == [VULKAN]
+    @test length(set) == 31
+    @test sum(length, set) > 400
+    symbols = defined_symbols(set)
+    @test in(:vkCmdEndRenderPass, symbols)
+    @test in(:VkInstance, symbols)
+
+    set = api.sets[4]
+    @test set.name === :VK_VERSION_1_3
+    @test set.version === v"1.3"
+    @test set.applicable == [VULKAN]
+    @test length(set) == 25
+    @test sum(length, set) > 200
+    symbols = defined_symbols(set)
+    @test in(:VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES, symbols)
+    @test in(:VkPhysicalDeviceVulkan13Features, symbols)
+    @test in(:vkCmdSetDepthBiasEnable, symbols)
+  end
+
   @testset "Structs" begin
     name = :VkApplicationInfo
     @test api.structs[name] == SpecStruct(name, STYPE_GENERIC_INFO, false, [], StructVector([

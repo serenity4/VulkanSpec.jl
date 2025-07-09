@@ -26,6 +26,7 @@ mutable struct VulkanAPI
   "Symbols defined by the API, excluding aliases."
   symbols::Dictionary{Symbol, Spec}
   symbols_including_aliases::Dictionary{Symbol, Spec}
+  sets::SymbolSets
   VulkanAPI(subset::ApplicableAPI, version::Optional{VersionNumber}) = new(subset, version)
 end
 
@@ -83,6 +84,7 @@ function parse_specification_data!(api::VulkanAPI, xml::Document)
   api.functions = Functions(xml, extensions)
   api.handles = Handles(xml, extensions)
   api.structure_types = parse_structure_types(xml)
+  api.sets = SymbolSets(xml)
   return api
 end
 

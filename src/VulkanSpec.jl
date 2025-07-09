@@ -101,7 +101,9 @@ end
     sprint(show, collection)
     sprintcm(show, collection)
   end
-  sprintcm(api.extensions[2])
+  sprintcm(show, api.extensions[2])
+  sprintcm(show, api.sets[4])
+  sprintcm(show, api.sets[end])
 end
 
 export

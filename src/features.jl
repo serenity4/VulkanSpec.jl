@@ -3,6 +3,8 @@
 @doc "Standard Vulkan." VULKAN
 @doc "Vulkan SC, for safety-critical systems." VULKAN_SC
 
+parse_applicable_apis(node::Node) = parse_applicable_apis(split(getattr(node, "api"; default = "", symbol = false)))
+
 @enum SymbolType SYMBOL_ENUM = 1 SYMBOL_TYPE = 2 SYMBOL_COMMAND = 3
 
 function SymbolType(node::Node)
@@ -26,10 +28,11 @@ struct SymbolGroup
   description::Optional{String}
 end
 
+@forward_interface SymbolGroup field = :symbols interface = [iteration, indexing]
+
 Base.contains(group::SymbolGroup, symbol::Symbol) = any(x -> x.name === symbol, group.symbols)
 Base.in(symbol::Symbol, group::SymbolGroup) = contains(group, symbol)
-
-parse_applicable_apis(node::Node) = parse_applicable_apis(split(getattr(node, "api"; default = "", symbol = false)))
+defined_symbols(group::SymbolGroup) = map(x -> x.name, group.symbols)
 
 function parse_applicable_apis(list::AbstractVector)
   applicable = ApplicableAPI[]
@@ -49,10 +52,38 @@ function SymbolGroup(node::Node)
   end
   depends_on = split(getattr(node, "depends_on"; default = "", symbol = false), ',')
   description = getattr(node, "comment"; default = nothing, symbol = false)
-  SymbolGroup(applicable, symbols, depends_on, description)
+  return SymbolGroup(applicable, symbols, depends_on, description)
 end
 
-defined_symbols(group::SymbolGroup) = map(x -> x.name, group.symbols)
+
+struct SymbolSet
+  name::Symbol
+  applicable::Vector{ApplicableAPI}
+  groups::Vector{SymbolGroup}
+  version::VersionNumber
+  description::Optional{String}
+  depends_on::Vector{Symbol}
+end
+
+@forward_interface SymbolSet field = :groups interface = [iteration, indexing]
+
+Base.contains(set::SymbolSet, symbol::Symbol) = any(contains(symbol), set)
+Base.in(symbol::Symbol, set::SymbolSet) = contains(set, symbol)
+defined_symbols(set::SymbolSet) = foldl((x, y) -> append!(x, defined_symbols(y)), set; init = Symbol[])
+
+function SymbolSet(node::Node)
+  name = getattr(node, "name")
+  applicable = parse_applicable_apis(node)
+  groups = SymbolGroup.(findall("./require", node))
+  version = parse(VersionNumber, node["number"])
+  description = getattr(node, "comment"; default = false, symbol = false)
+  depends_on = Symbol.(split(getattr(node, "depends"; default = "", symbol = false), ','))
+  return SymbolSet(name, applicable, groups, version, description, depends_on)
+end
+
+struct SymbolSets <: Collection{SymbolSet}
+  data::data_type(SymbolSet)
+end
 
 @enum ExtensionType begin
   EXTENSION_TYPE_INSTANCE
