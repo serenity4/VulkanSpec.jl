@@ -1,5 +1,8 @@
-struct VulkanAPI
-  version::Optional{VersionNumber}
+@enum VulkanAPISubset VULKAN_API VULKAN_API_SC
+
+mutable struct VulkanAPI
+  const subset::VulkanAPISubset
+  const version::Optional{VersionNumber}
   platforms::Platforms
   authors::Authors
   extensions::Extensions
@@ -25,6 +28,7 @@ struct VulkanAPI
   "Symbols defined by the API, excluding aliases."
   symbols::Dictionary{Symbol, Spec}
   symbols_including_aliases::Dictionary{Symbol, Spec}
+  VulkanAPI(subset::VulkanAPISubset, version::Optional{VersionNumber}) = new(subset, version)
 end
 
 Base.getindex(api::VulkanAPI, symbol::Symbol) = api.symbols_including_aliases[symbol]
@@ -55,83 +59,92 @@ end
 VulkanAPI(xml_file::AbstractString, version = infer_version_from_filename(xml_file)) = VulkanAPI(readxml(xml_file), version)
 
 function VulkanAPI(xml::Document, version = nothing)
-  platforms = Platforms(xml)
-  authors = Authors(xml)
-  extensions = Extensions(xml)
-  disabled_symbols = Set(foldl(append!, extensions[.!in.(EXTENSION_SUPPORT_VULKAN, extensions.support)].symbols; init = Symbol[]))
-  aliases = Aliases(xml)
-  extensions_spirv = ExtensionsSPIRV(xml)
-  capabilities_spirv = CapabilitiesSPIRV(xml)
-  constants = Constants(xml, extensions)
-  enums = Enums(xml, extensions)
-  bitmasks = Bitmasks(xml, extensions)
-  flags = Flags(xml, extensions, bitmasks, disabled_symbols)
-  structs = Structs(xml, extensions)
-  unions = Unions(xml, extensions)
-  functions = Functions(xml, extensions)
-  handles = Handles(xml, extensions)
-  constructors = Constructors(functions, handles, structs, aliases)
-  destructors = Destructors(functions, handles)
+  api = VulkanAPI(VULKAN_API, version)
+  parse_specification_data!(api, xml)
+  extend_enums_and_bitmasks!(api, xml)
+  generate_constructors_and_destructors!(api)
+  compute_symbols!(api)
+  classify_functions!(api)
+  return api
+end
 
-  # Extend all types with core and extension values.
-  extensible = [enums..., bitmasks..., structs...]
+function parse_specification_data!(api::VulkanAPI, xml::Document)
+  api.platforms = Platforms(xml)
+  api.authors = Authors(xml)
+  api.extensions = extensions = Extensions(xml)
+  api.disabled_symbols = Set(foldl(append!, extensions[.!in.(EXTENSION_SUPPORT_VULKAN, extensions.support)].symbols; init = Symbol[]))
+  api.aliases = Aliases(xml)
+  api.extensions_spirv = ExtensionsSPIRV(xml)
+  api.capabilities_spirv = CapabilitiesSPIRV(xml)
+  api.constants = Constants(xml, extensions)
+  api.enums = Enums(xml, extensions)
+  api.bitmasks = Bitmasks(xml, extensions)
+  api.flags = Flags(xml, extensions, api.bitmasks, api.disabled_symbols)
+  api.structs = Structs(xml, extensions)
+  api.unions = Unions(xml, extensions)
+  api.functions = Functions(xml, extensions)
+  api.handles = Handles(xml, extensions)
+  api.structure_types = parse_structure_types(xml)
+  return api
+end
+
+function extend_enums_and_bitmasks!(api::VulkanAPI, xml::Document)
   for node in findall("//*[@extends and not(@alias)]", xml)
-    spec = extensible[findfirst(spec -> name(spec) == Symbol(node["extends"]), extensible)]
-    @switch spec begin
-      @case ::SpecBitmask
+    name = getattr(node, "extends")
+
+    # Extended enum.
+    i = findfirst(==(name) ∘ key, api.enums)
+    if i !== nothing
+      enum = api.enums[i]
+      value = SpecConstant(node)
+      !in(value, enum.enums) && !in(value.name, api.disabled_symbols) && push!(enum.enums, value)
+      continue
+    end
+
+    # Extended bitmask.
+    i = findfirst(==(name) ∘ key, api.bitmasks)
+    if i !== nothing
+      bitmask = api.bitmasks[i]
       if haskey(node, "bitpos") && !haskey(node, "value")
         value = SpecBit(node)
-        !in(value, spec.bits) && !in(value.name, disabled_symbols) && push!(spec.bits, value)
+        !in(value, bitmask.bits) && !in(value.name, api.disabled_symbols) && push!(bitmask.bits, value)
       elseif haskey(node, "value")
         value = SpecBitCombination(node)
-        !in(value, spec.combinations) && !in(value.name, disabled_symbols) && push!(spec.combinations, value)
+        !in(value, bitmask.combinations) && !in(value.name, api.disabled_symbols) && push!(bitmask.combinations, value)
       end
-      @case ::SpecEnum
-      value = SpecConstant(node)
-      !in(value, spec.enums) && !in(value.name, disabled_symbols) && push!(spec.enums, value)
+      continue
     end
+
+    @warn "Unknown type '$name' extended"
   end
+  return api
+end
 
-  all_specs = [
-    functions...,
-    structs...,
-    handles...,
-    constants...,
-    enums...,
-    (enums.enums...)...,
-    bitmasks...,
-    (bitmasks.bits...)...,
-    (bitmasks.combinations...)...
-  ]
-  symbols = sortkeys!(Dictionary(name.(all_specs), all_specs))
-  symbol_aliases = get_symbol_aliases(aliases, symbols, disabled_symbols)
-  symbols_including_aliases = sortkeys!(merge!(symbol_aliases, symbols))
+function generate_constructors_and_destructors!(api::VulkanAPI)
+  api.constructors = Constructors(api.functions, api.handles, api.structs, api.aliases)
+  api.destructors = Destructors(api.functions, api.handles)
+  return api
+end
 
-  structure_types = parse_structure_types(xml)
-  VulkanAPI(
-    version,
-    platforms,
-    authors,
-    extensions,
-    disabled_symbols,
-    extensions_spirv,
-    capabilities_spirv,
-    constants,
-    enums,
-    bitmasks,
-    flags,
-    structs,
-    unions,
-    functions,
-    handles,
-    constructors,
-    destructors,
-    aliases,
-    structure_types,
-    classify_functions(functions, aliases, handles)...,
-    symbols,
-    symbols_including_aliases,
-  )
+function compute_symbols!(api::VulkanAPI)
+  specs = Spec[]
+  append!(specs, api.functions)
+  append!(specs, api.structs)
+  append!(specs, api.handles)
+  append!(specs, api.constants)
+  append!(specs, api.enums)
+  append!(specs, api.bitmasks)
+  for enum in api.enums
+    append!(specs, enum.enums)
+  end
+  for bitmask in api.bitmasks
+    append!(specs, bitmask.bits)
+    append!(specs, bitmask.combinations)
+  end
+  api.symbols = sortkeys!(Dictionary(name.(specs), specs))
+  symbol_aliases = get_symbol_aliases(api.aliases, api.symbols, api.disabled_symbols)
+  api.symbols_including_aliases = sortkeys!(merge!(symbol_aliases, api.symbols))
+  return api
 end
 
 function get_symbol_aliases(aliases, symbols, disabled_symbols)
@@ -145,24 +158,24 @@ function get_symbol_aliases(aliases, symbols, disabled_symbols)
   Dictionary(names, specs)
 end
 
-function classify_functions(functions::Functions, aliases::Aliases, handles::Handles)
-  core_functions = Symbol[]
-  instance_functions = Symbol[]
-  device_functions = Symbol[]
-  for fname in unique!([functions.name; [x for (x, alias) in pairs(aliases.dict) if haskey(functions, alias)]])
-    spec = functions[follow_alias(fname, aliases)]
-    t = follow_alias(spec.params[1], aliases)
-    h = get(handles, t.type, nothing)
+function classify_functions!(api::VulkanAPI)
+  api.core_functions = Symbol[]
+  api.instance_functions = Symbol[]
+  api.device_functions = Symbol[]
+  for fname in unique!([api.functions.name; [x for (x, alias) in pairs(api.aliases.dict) if haskey(api.functions, alias)]])
+    spec = api.functions[follow_alias(fname, api.aliases)]
+    t = follow_alias(spec.params[1], api.aliases)
+    h = get(api.handles, t.type, nothing)
     if isnothing(h)
-      push!(core_functions, fname)
+      push!(api.core_functions, fname)
     else
-      parents = parent_hierarchy(h, handles)
+      parents = parent_hierarchy(h, api.handles)
       if :VkDevice in parents
-        push!(device_functions, fname)
+        push!(api.device_functions, fname)
       elseif :VkInstance in parents
-        push!(instance_functions, fname)
+        push!(api.instance_functions, fname)
       end
     end
   end
-  (core_functions, instance_functions, device_functions)
+  return api
 end

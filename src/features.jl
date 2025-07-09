@@ -37,13 +37,13 @@ struct Platforms <: Collection{SpecPlatform}
 end
 
 "Describes what type of support an extension has per the specification."
-@bitmask ExtensionSupport::UInt32 begin
+@bitmask exported = true ExtensionSupport::UInt32 begin
   "Disabled."
-  EXTENSION_SUPPORT_DISABLED = 0
+  EXTENSION_SUPPORT_DISABLED = 1 << 0
   "Standard Vulkan."
-  EXTENSION_SUPPORT_VULKAN = 1 << 0
+  EXTENSION_SUPPORT_VULKAN = 1 << 1
   "Vulkan SC, for safety-critical systems."
-  EXTENSION_SUPPORT_VULKAN_SC = 1 << 1
+  EXTENSION_SUPPORT_VULKAN_SC = 1 << 2
 end
 
 struct SpecExtension <: Spec
