@@ -3,7 +3,14 @@
 @doc "Standard Vulkan." VULKAN
 @doc "Vulkan SC, for safety-critical systems." VULKAN_SC
 
-parse_applicable_apis(node::Node) = parse_applicable_apis(split(getattr(node, "api"; default = "", symbol = false)))
+parse_applicable_apis(node::Node) = parse_applicable_apis(split(getattr(node, "api"; default = "", symbol = false), ','))
+
+function parse_applicable_apis(list::AbstractVector)
+  applicable = ApplicableAPI[]
+  in("vulkan", list) && push!(applicable, VULKAN)
+  in("vulkansc", list) && push!(applicable, VULKAN_SC)
+  return applicable
+end
 
 @enum SymbolType SYMBOL_ENUM = 1 SYMBOL_TYPE = 2 SYMBOL_COMMAND = 3
 
@@ -33,13 +40,6 @@ end
 Base.contains(group::SymbolGroup, symbol::Symbol) = any(x -> x.name === symbol, group.symbols)
 Base.in(symbol::Symbol, group::SymbolGroup) = contains(group, symbol)
 defined_symbols(group::SymbolGroup) = map(x -> x.name, group.symbols)
-
-function parse_applicable_apis(list::AbstractVector)
-  applicable = ApplicableAPI[]
-  in("vulkan", list) && push!(applicable, VULKAN)
-  in("vulkansc", list) && push!(applicable, VULKAN_SC)
-  return applicable
-end
 
 function SymbolGroup(node::Node)
   applicable = parse_applicable_apis(node)

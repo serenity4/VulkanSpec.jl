@@ -90,7 +90,11 @@ function Base.show(io::IO, api::VulkanAPI)
   print(io, typeof(api), '(' * vulkan_version(api), " with ", length(api.structs) + length(api.unions), " types and ", length(api.functions), " functions - ", length(api.symbols) + length(api.aliases.dict), " symbols in total, including ", length(api.aliases.dict), " aliases)")
 end
 
-Base.show(io::IO, ::MIME"text/plain", removed::RemovedSymbol) = print(io, ':', removed.name, " (", removed.was_provisional ? "provisional" : "BREAKING", ')')
+function Base.show(io::IO, ::MIME"text/plain", removed::RemovedSymbol)
+  print(io, ':', removed.name)
+  isbreaking(removed) || return
+  print(io, " (", removed.was_provisional ? "provisional" : "BREAKING", ')')
+end
 
 function Base.show(io::IO, mime::MIME"text/plain", diff::Diff)
   println(io, "Diff from Vulkan (", vulkan_version(diff.old), ") to Vulkan (", vulkan_version(diff.new), "):")

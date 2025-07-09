@@ -6,9 +6,7 @@ key(spec::Spec) = name(spec)
 abstract type Collection{S} end
 
 Base.eltype(::Type{<:Collection{S}}) where {S} = S
-
-(::Type{T})(data::Vector{S}) where {S<:Spec,T<:Collection{S}} = T(StructVector(data))
-(::Type{T})(xml::Document, args...) where {S<:Spec,T<:Collection{S}} = T([S(node, args...) for node in nodes(S, xml)])
+Base.copy(collection::Collection) = typeof(collection)(copy(collection.data))
 
 function Base.get(default, collection::Collection{T}, key) where {T}
   idx = findfirst(x -> matches(key, x), collection.data)
@@ -23,7 +21,9 @@ Base.getindex(collection::Collection, x::AbstractArray) = collection.data[x]
 Base.haskey(collection::Collection, x) = !isnothing(get(collection, x, nothing))
 Base.union!(x::T, y::T) where {T <: Collection} = T(union!(x.data, y.data))
 
-@forward_methods Collection field = :data Base.keys Base.filter(pred, _)
+Base.filter(f::F, collection::Collection) where {F} = typeof(collection)(filter(f, collection.data))
+Base.filter!(f::F, collection::Collection) where {F} = typeof(collection)(filter!(f, collection.data))
+@forward_methods Collection field = :data Base.keys
 @forward_interface Collection field = :data interface = [iteration, indexing] omit = [getindex]
 
 @generated function Base.getproperty(collection::Collection{T}, name::Symbol) where {T}

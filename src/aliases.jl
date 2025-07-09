@@ -17,13 +17,18 @@ end
 function Aliases(xml::Document)
   dict = dictionary(Symbol(alias["name"]) => Symbol(alias["alias"]) for alias ∈ findall("//*[@alias and not(@feature)]", xml))
   sortkeys!(dict)
-  verts = unique(vcat(collect(keys(dict)), collect(values(dict))))
+  verts, graph = compute_alias_graph(dict)
+  Aliases(dict, verts, graph)
+end
+
+function compute_alias_graph(aliases)
+  verts = unique(vcat(collect(keys(aliases)), collect(values(aliases))))
   graph = SimpleDiGraph(length(verts))
-  for (j, (src, dst)) ∈ enumerate(pairs(dict))
+  for (j, (src, dst)) ∈ enumerate(pairs(aliases))
     i = findfirst(==(dst), verts)
     add_edge!(graph, i, j)
   end
-  Aliases(dict, verts, graph)
+  return verts, graph
 end
 
 "Whether this type is an alias for another name."

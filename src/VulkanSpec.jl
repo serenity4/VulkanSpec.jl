@@ -84,13 +84,15 @@ for T in subtypes(Collection)
   S = eltype(supertype(T))
   T, S = nameof(T), nameof(S)
   @eval $T(data::Vector{$S}) = $T(StructVector(data))
-  @eval $T(xml::Document, args...) = $T([$S(node, args...) for node in nodes($S, xml)])
-  @eval $T(xml::Document, extensions::Extensions, args...) = $T(filter(x -> isenabled(x, extensions), [$S(node, args...) for node in nodes($S, xml)]))
+  @eval function $T(xml::Document, args...)
+    data = [$S(node, args...) for node in nodes($S, xml)]
+    $T(data)
+  end
   @eval export $T
 end
 
 for sym in names(@__MODULE__, all = true)
-  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "EXTENSION_", "Spec", "Queue", "RenderPass"])
+  if any(startswith(string(sym), prefix) for prefix in ["PLATFORM_", "FTYPE_", "STYPE_", "EXTENSION_", "SYMBOL_", "Spec", "Queue", "RenderPass"])
     @eval export $sym
   end
 end
@@ -136,8 +138,10 @@ export
   # API
   VulkanAPI,
   Diff, RemovedSymbol, isbreaking,
-  SymbolType, SYMBOL_TYPE, SYMBOL_ENUM, SYMBOL_COMMAND, SymbolInfo,
+  SymbolType, SymbolInfo,
   SymbolGroup, defined_symbols,
+  ApplicableAPI, VULKAN, VULKAN_SC,
+  filter_applicable_symbols,
 
   # Alias manipulation
   alias_dict,
@@ -157,6 +161,7 @@ export
   is_inferable_length,
   length_chain,
   is_arr,
+  is_tuple_arr,
   is_size,
   is_data,
   is_version,

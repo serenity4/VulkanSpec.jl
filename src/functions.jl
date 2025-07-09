@@ -143,7 +143,9 @@ struct Functions <: Collection{SpecFunc}
   data::data_type(SpecFunc)
 end
 
-is_arr(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && innermost_type(spec.type) ≠ :Cvoid
+is_ntuple_expr(ex) = Meta.isexpr(ex, :curly) && ex.args[1] === :NTuple
+is_tuple_arr(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && is_ntuple_expr(spec.type)
+is_arr(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && !is_tuple_arr(spec) && innermost_type(spec.type) ≠ :Cvoid
 is_length(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && !is_size(spec)
 is_size(spec::Union{SpecStructMember,SpecFuncParam}) = !isempty(spec.arglen) && endswith(string(spec.name), r"[sS]ize")
 is_data(spec::Union{SpecStructMember,SpecFuncParam}) = !isnothing(spec.len) && spec.type == :(Ptr{Cvoid})
@@ -203,6 +205,9 @@ end
 is_inferable_length(spec::SpecFuncParam) = true
 
 function length_chain(spec::Union{SpecStruct, SpecFunc}, chain, structs)
-  parts = Symbol.(split(string(chain), "->"))
+  chain = string(chain)
+  i = tryparse(Int, chain)
+  i !== nothing && return (spec[i],)
+  parts = Symbol.(split(chain, "->"))
   collect(FieldIterator(spec[parts[1]], @view(parts[2:end]), structs))
 end

@@ -128,15 +128,11 @@ function SpecBitmask(node::Node)
   SpecBitmask(name, bits, combinations, width)
 end
 
-function SpecFlag(node::Node, bitmasks::Bitmasks, disabled_symbols)
+function SpecFlag(node::Node, bitmasks::Bitmasks)
   name = Symbol(findfirst("./name", node).content)
   typealias = Symbol(findfirst("./type", node).content)
-  bitmask = if haskey(node, "requires")
-    bitmask_name = getattr(node, "requires")
-    bitmask_name in disabled_symbols ? nothing : bitmasks[bitmask_name]
-  else
-    nothing
-  end
+  bitmask_name = getattr(node, "requires")
+  bitmask = bitmask_name === nothing ? nothing : bitmasks[bitmask_name]
   SpecFlag(name, typealias, bitmask)
 end
 
@@ -324,24 +320,24 @@ function parse_structure_types(xml)
   sortkeys!(res)
 end
 
-nodes(::Type{SpecPlatform}, xml::Document) = findall("//platform", xml)
-nodes(::Type{AuthorTag}, xml::Document) = findall("//tag", xml)
-nodes(::Type{SpecExtension}, xml::Document) = findall("//extension", xml)
-nodes(::Type{SpecExtensionSPIRV}, xml::Document) = findall("//spirvextension", xml)
-nodes(::Type{SpecCapabilitySPIRV}, xml::Document) = findall("//spirvcapability", xml)
-nodes(::Type{SpecEnum}, xml::Document) = findall("//enums[@type = 'enum' and not(@alias)]", xml)
-nodes(::Type{SpecBitmask}, xml::Document) = findall("//enums[@type = 'bitmask' and not(@alias)]", xml)
-nodes(::Type{SpecFlag}, xml::Document) = findall("//type[@category = 'bitmask' and not(@alias)]", xml)
-nodes(::Type{SpecConstant}, xml::Document) = [findall("//enums[@name = 'API Constants']/*[@value and @name]", xml); findall("//extension/require/enum[not(@extends) and not(@alias) and @value]", xml); findall("/registry/types/type[@category = 'basetype' or @category = 'bitmask' and not(@alias) and (not(@api) or @api='vulkan')]", xml)]
-nodes(::Type{SpecStruct}, xml::Document) = findall("//type[@category = 'struct' and not(@alias)]", xml)
-nodes(::Type{SpecUnion}, xml::Document) = findall("//type[@category = 'union' and not(@alias)]", xml)
-nodes(::Type{SpecFunc}, xml::Document) = findall("//command[not(@name) and (not(@api) or @api='vulkan')]", xml)
-nodes(::Type{SpecHandle}, xml::Document) = findall("//type[@category = 'handle' and not(@alias)]", xml)
-function nodes(::Type{SpecAlias}, xml::Document)
-  aliases = findall("//*[@alias and @name]", xml)
-  filter!(aliases) do alias
-    parent = x.parentnode.parentnode
-    parent.name ≠ "extension" || getattr(parent, "supported") ≠ :disabled
-  end
-end
-nodes(::Type{SymbolSet}, xml::Document) = findall("//feature[@api]", xml)
+api_selector::String = "(not(@api) or @api = vulkan)"
+
+nodes(::Type{SpecPlatform}, xml::Document)        = findall("/registry/platforms/platform", xml)
+nodes(::Type{AuthorTag}, xml::Document)           = findall("/registry/tags/tag", xml)
+nodes(::Type{SpecExtension}, xml::Document)       = findall("/registry/extensions/extension", xml)
+nodes(::Type{SpecExtensionSPIRV}, xml::Document)  = findall("/registry/spirvextensions/spirvextension", xml)
+nodes(::Type{SpecCapabilitySPIRV}, xml::Document) = findall("/registry/spirvcapabilities/spirvcapability", xml)
+nodes(::Type{SpecEnum}, xml::Document)            = findall("/registry/enums[@type = 'enum' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecBitmask}, xml::Document)         = findall("/registry/enums[@type = 'bitmask' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecFlag}, xml::Document)            = findall("/registry/types/type[@category = 'bitmask' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecConstant}, xml::Document)        = [
+                                                      findall("/registry/enums[@name = 'API Constants']/*[@value and @name]", xml);
+                                                      findall("/registry/types/type[@category = 'basetype' or @category = 'bitmask' and not(@alias) and $api_selector]", xml);
+                                                      findall("/registry/extensions/extension/require/enum[not(@alias) and (@value or @offset)]", xml);
+                                                  ]
+nodes(::Type{SpecStruct}, xml::Document)          = findall("/registry/types/type[@category = 'struct' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecUnion}, xml::Document)           = findall("/registry/types/type[@category = 'union' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecFunc}, xml::Document)            = findall("/registry/commands/command[not(@name) and $api_selector]", xml)
+nodes(::Type{SpecHandle}, xml::Document)          = findall("/registry/types/type[@category = 'handle' and not(@alias) and $api_selector]", xml)
+nodes(::Type{SpecAlias}, xml::Document)           = findall("//*[@alias and @name]", xml)
+nodes(::Type{SymbolSet}, xml::Document)           = findall("/registry/feature", xml)

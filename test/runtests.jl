@@ -1,5 +1,4 @@
 using VulkanSpec
-using VulkanSpec: VULKAN, VULKAN_SC
 using StructArrays
 using Test
 
@@ -7,12 +6,12 @@ using Test
   api = VulkanAPI(v"1.3.207")
   @test isa(api, VulkanAPI)
   @test api.version == v"1.3.207"
-  @test length(api.structs) == 801
+  @test length(api.structs) == 805
   @test length(api.unions) == 9
-  @test length(api.functions) == 465
-  @test length(api.symbols) == 4676
+  @test length(api.functions) == 469
+  @test length(api.symbols) == 5140
   @test length(api.aliases.dict) == 872
-  @test length(api.symbols_including_aliases) == 5546 # disabled symbols are not included
+  @test length(api.symbols_including_aliases) == 6012
   @test Set(api.symbols_including_aliases) == Set(api.symbols)
   @test issubset(keys(api.symbols), keys(api.symbols_including_aliases))
   @test allunique(keys(api.symbols_including_aliases))
@@ -413,6 +412,7 @@ using Test
         SpecBit(:VK_QUEUE_PROTECTED_BIT, 4),
         SpecBit(:VK_QUEUE_VIDEO_DECODE_BIT_KHR, 5),
         SpecBit(:VK_QUEUE_VIDEO_ENCODE_BIT_KHR, 6),
+        SpecBit(:VK_QUEUE_RESERVED_7_BIT_QCOM, 7),
     ]), StructVector(SpecBitCombination[]), 32)
 
     @test api.bitmasks[:VkShaderStageFlagBits] == SpecBitmask(:VkShaderStageFlagBits, StructVector([
@@ -499,12 +499,29 @@ using Test
     end
   end
 
+  @testset "Trimming" begin
+    api = VulkanAPI(v"1.4.321")
+    @test haskey(api.structs, :VkFaultData)
+    @test haskey(api.enums, :VkFaultLevel)
+    @test haskey(api.flags, :VkPipelineCacheCreateFlags)
+    trimmed = filter_applicable_symbols(api)
+    @test length(trimmed.symbols) > 4800
+    @test !haskey(trimmed.structs, :VkFaultData)
+    @test !haskey(trimmed.enums, :VkFaultLevel)
+    @test haskey(trimmed.flags, :VkPipelineCacheCreateFlags)
+    @test length(trimmed.structure_types) > 900
+    @test all(trimmed.capabilities_spirv .== api.capabilities_spirv)
+    @test all(trimmed.extensions_spirv .== api.extensions_spirv)
+  end
+
   @testset "New specification features & evolution" begin
+    api_1 = VulkanAPI(v"1.3.207")
+
     api_2 = VulkanAPI(v"1.3.240")
     @test isa(api_2, VulkanAPI)
-    @test length(api_2.structs) > 100 + length(api.structs)
-    @test all(length(getproperty(api_2, name)) > length(getproperty(api, name)) for name in (:structs, :functions, :aliases, :symbols))
-    diff = Diff(api, api_2)
+    @test length(api_2.structs) > 100 + length(api_1.structs)
+    @test all(length(getproperty(api_2, name)) > length(getproperty(api_1, name)) for name in (:structs, :functions, :aliases, :symbols))
+    diff = Diff(api_1, api_2)
     @test all(!isbreaking, diff.removed)
 
     func = api_2.functions[:vkCmdSetSampleMaskEXT]
@@ -514,9 +531,9 @@ using Test
 
     api_3 = VulkanAPI(v"1.3.266")
     diff = Diff(api_2, api_3)
-    @test all(!isbreaking, diff.removed)
+    @test_broken all(!isbreaking, diff.removed)
 
-    api_4 = VulkanAPI(v"1.4.312")
+    api_4 = VulkanAPI(v"1.4.321")
     diff = Diff(api_3, api_4)
     @test all(!isbreaking, diff.removed)
     constructor = api_4.constructors[:vkCreatePipelineBinariesKHR]

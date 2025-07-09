@@ -5,7 +5,6 @@ mutable struct VulkanAPI
   authors::Authors
   extensions::Extensions
   "Some specifications are disabled in the Vulkan headers (see https://github.com/KhronosGroup/Vulkan-Docs/issues/1225)."
-  disabled_symbols::Set{Symbol}
   extensions_spirv::ExtensionsSPIRV
   capabilities_spirv::CapabilitiesSPIRV
   constants::Constants
@@ -71,18 +70,17 @@ function parse_specification_data!(api::VulkanAPI, xml::Document)
   api.platforms = Platforms(xml)
   api.authors = Authors(xml)
   api.extensions = extensions = Extensions(xml)
-  api.disabled_symbols = Set(foldl(append!, defined_symbols.(extensions[.!in.(VULKAN, extensions.applicable)]); init = Symbol[]))
   api.aliases = Aliases(xml)
   api.extensions_spirv = ExtensionsSPIRV(xml)
   api.capabilities_spirv = CapabilitiesSPIRV(xml)
-  api.constants = Constants(xml, extensions)
-  api.enums = Enums(xml, extensions)
-  api.bitmasks = Bitmasks(xml, extensions)
-  api.flags = Flags(xml, extensions, api.bitmasks, api.disabled_symbols)
-  api.structs = Structs(xml, extensions)
-  api.unions = Unions(xml, extensions)
-  api.functions = Functions(xml, extensions)
-  api.handles = Handles(xml, extensions)
+  api.constants = Constants(xml)
+  api.enums = Enums(xml)
+  api.bitmasks = Bitmasks(xml)
+  api.flags = Flags(xml, api.bitmasks)
+  api.structs = Structs(xml)
+  api.unions = Unions(xml)
+  api.functions = Functions(xml)
+  api.handles = Handles(xml)
   api.structure_types = parse_structure_types(xml)
   api.sets = SymbolSets(xml)
   return api
@@ -97,7 +95,7 @@ function extend_enums_and_bitmasks!(api::VulkanAPI, xml::Document)
     if i !== nothing
       enum = api.enums[i]
       value = SpecConstant(node)
-      !in(value, enum.enums) && !in(value.name, api.disabled_symbols) && push!(enum.enums, value)
+      !in(value, enum.enums) && push!(enum.enums, value)
       continue
     end
 
@@ -107,10 +105,10 @@ function extend_enums_and_bitmasks!(api::VulkanAPI, xml::Document)
       bitmask = api.bitmasks[i]
       if haskey(node, "bitpos") && !haskey(node, "value")
         value = SpecBit(node)
-        !in(value, bitmask.bits) && !in(value.name, api.disabled_symbols) && push!(bitmask.bits, value)
+        !in(value, bitmask.bits) && push!(bitmask.bits, value)
       elseif haskey(node, "value")
         value = SpecBitCombination(node)
-        !in(value, bitmask.combinations) && !in(value.name, api.disabled_symbols) && push!(bitmask.combinations, value)
+        !in(value, bitmask.combinations) && push!(bitmask.combinations, value)
       end
       continue
     end
@@ -141,17 +139,31 @@ function compute_symbols!(api::VulkanAPI)
     append!(specs, bitmask.bits)
     append!(specs, bitmask.combinations)
   end
-  api.symbols = sortkeys!(Dictionary(name.(specs), specs))
-  symbol_aliases = get_symbol_aliases(api.aliases, api.symbols, api.disabled_symbols)
+  select_first_occurences!(specs)
+  names = name.(specs)
+  api.symbols = sortkeys!(Dictionary(names, specs))
+  symbol_aliases = get_symbol_aliases(api.aliases, api.symbols)
   api.symbols_including_aliases = sortkeys!(merge!(symbol_aliases, api.symbols))
   return api
 end
 
-function get_symbol_aliases(aliases, symbols, disabled_symbols)
+# Workaround for the fact that redundancies may be introduced across
+# extension-defined symbols and promoted (set-defined) symbols.
+function select_first_occurences!(specs)
+  seen = Set{Symbol}()
+  indices = Int[]
+  for (i, spec) in enumerate(specs)
+    name = @__MODULE__().name(spec)
+    in(name, seen) && push!(indices, i)
+    push!(seen, name)
+  end
+  splice!(specs, indices)
+end
+
+function get_symbol_aliases(aliases, symbols)
   names = Symbol[]
   specs = Spec[]
   for name in keys(aliases.dict)
-    in(name, disabled_symbols) && continue
     push!(names, name)
     push!(specs, symbols[follow_alias(name, aliases)])
   end
@@ -178,4 +190,88 @@ function classify_functions!(api::VulkanAPI)
     end
   end
   return api
+end
+
+function filter_applicable_symbols(api::VulkanAPI)
+  vulkan_version_sets = filter(x -> in(VULKAN, x.applicable), api.sets)
+  version = @something(api.version, vulkan_version_sets[end].version)
+  symbols = Symbol[]
+  for set in vulkan_version_sets[1:(1 + version.minor)]
+    append!(symbols, defined_symbols(set))
+  end
+  for extension in api.extensions
+    in(VULKAN, extension.applicable) || continue
+    for group in extension.groups
+      isempty(group.applicable) || in(VULKAN, group.applicable) || continue
+      append!(symbols, defined_symbols(group))
+    end
+  end
+  for symbol in symbols
+    isalias(symbol, api.aliases) && push!(symbols, follow_alias(symbol, api.aliases))
+  end
+  return trim_for_symbols(api, Set(symbols), version)
+end
+
+function trim_for_symbols(from::VulkanAPI, symbols, version)
+  api = VulkanAPI(from.applicable, version)
+  api.platforms = copy(from.platforms)
+  api.authors = copy(from.authors)
+  api.extensions_spirv = copy(from.extensions_spirv)
+  api.capabilities_spirv = copy(from.capabilities_spirv)
+
+  api.sets = filter(deepcopy(from.sets)) do set
+    in(VULKAN, set.applicable) || return false
+    filter!(x -> in(VULKAN, x.applicable), set.groups)
+    return !isempty(set)
+  end
+  api.extensions = filter(deepcopy(from.extensions)) do extension
+    in(VULKAN, extension.applicable) || return false
+    filter!(x -> in(VULKAN, x.applicable), extension.groups)
+    return !isempty(extension.groups)
+  end
+  api.structs = filter(in(symbols) ∘ name, from.structs)
+  api.unions = filter(in(symbols) ∘ name, from.unions)
+  api.functions = filter(in(symbols) ∘ name, from.functions)
+  api.enums = filter(deepcopy(from.enums)) do enum
+    in(name(enum), symbols) || return false
+    filter!(in(symbols) ∘ name, enum.enums)
+    return !isempty(enum.enums)
+  end
+  api.bitmasks = filter(deepcopy(from.bitmasks)) do bitmask
+    in(name(bitmask), symbols) || return false
+    filter!(in(symbols) ∘ name, bitmask.bits)
+    filter!(in(symbols) ∘ name, bitmask.combinations)
+    return !isempty(bitmask.bits)
+  end
+  api.flags = filter(in(symbols) ∘ name, from.flags)
+  api.constants = filter(in(symbols) ∘ name, from.constants)
+  api.handles = filter(in(symbols) ∘ name, from.handles)
+  api.aliases = trim_aliases(from, symbols)
+  api.structure_types = trim_structure_types(from, symbols)
+  generate_constructors_and_destructors!(api)
+  compute_symbols!(api)
+  classify_functions!(api)
+  return api
+end
+
+function trim_aliases(from::VulkanAPI, symbols)
+  aliases = Dictionary{Symbol,Symbol}()
+  for (alias, aliased) in pairs(from.aliases.dict)
+    in(alias, symbols) || continue
+    in(aliased, symbols) || continue
+    insert!(aliases, alias, aliased)
+  end
+  sortkeys!(aliases)
+  verts, graph = compute_alias_graph(aliases)
+  return Aliases(aliases, verts, graph)
+end
+
+function trim_structure_types(from::VulkanAPI, symbols)
+  structure_types = Dictionary{Symbol,Symbol}()
+  for (sname, stype) in pairs(from.structure_types)
+    in(sname, symbols) || continue
+    in(stype, symbols) || continue
+    insert!(structure_types, sname, stype)
+  end
+  return structure_types
 end

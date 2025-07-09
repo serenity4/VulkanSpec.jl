@@ -10,7 +10,13 @@ struct Diff
   added::Vector{Symbol}
 end
 
-isbreaking(symbol::RemovedSymbol) = !symbol.was_provisional && !contains(string(symbol.name), r"(VIDEO|STD|Video|Std|RESERVED)")
+function isbreaking(symbol::RemovedSymbol)
+  symbol.was_provisional && return false
+  name = string(symbol.name)
+  contains(name, r"(VIDEO|STD|Video|Std|RESERVED)") && return false
+  endswith(name, r"(_EXTENSION_NAME|_SPEC_VERSION)") && return false
+  return true
+end
 
 function Diff(old::VulkanAPI, new::VulkanAPI)
   removed_symbols = setdiff(keys(old.symbols_including_aliases), keys(new.symbols_including_aliases))
