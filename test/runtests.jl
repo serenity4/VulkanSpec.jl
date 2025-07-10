@@ -532,7 +532,7 @@ using Test
 
     api_3 = VulkanAPI(v"1.3.266")
     diff = Diff(api_2, api_3)
-    @test_broken all(!isbreaking, diff.removed)
+    @test all(!isbreaking, diff.removed)
 
     api_4 = VulkanAPI(v"1.4.321")
     diff = Diff(api_3, api_4)
