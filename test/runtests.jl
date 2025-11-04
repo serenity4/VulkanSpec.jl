@@ -541,5 +541,9 @@ using Test
     @test constructor.handle === api_4.handles[:VkPipelineBinaryKHR]
     @test constructor.batch === true
     @test constructor.create_info_struct === api_4.structs[:VkPipelineBinaryCreateInfoKHR]
+
+    api_5 = VulkanAPI(v"1.4.328")
+    diff = Diff(api_4, api_5)
+    @test count(isbreaking, diff.removed) == 2
   end
 end;

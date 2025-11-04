@@ -1,4 +1,16 @@
 const queue_map = dictionary([
+    :VK_QUEUE_COMPUTE_BIT => QueueCompute(),
+    :VK_QUEUE_GRAPHICS_BIT => QueueGraphics(),
+    :VK_QUEUE_TRANSFER_BIT => QueueTransfer(),
+    :VK_QUEUE_SPARSE_BINDING_BIT => QueueSparseBinding(),
+    :VK_QUEUE_VIDEO_DECODE_BIT_KHR => QueueVideoDecode(),
+    :VK_QUEUE_VIDEO_ENCODE_BIT_KHR => QueueVideoEncode(),
+    :VK_QUEUE_OPTICAL_FLOW_BIT_NV => QueueOpticalFlow(),
+    :VK_QUEUE_DATA_GRAPH_BIT_ARM => QueueDataGraph(),
+])
+
+# The queue reference format changed somewhere between 1.4.321 and 1.4.328
+merge!(queue_map, dictionary([
     :compute => QueueCompute(),
     :graphics => QueueGraphics(),
     :transfer => QueueTransfer(),
@@ -7,7 +19,7 @@ const queue_map = dictionary([
     :encode => QueueVideoEncode(),
     :opticalflow => QueueOpticalFlow(),
     :data_graph => QueueDataGraph(),
-])
+]))
 
 const render_pass_compatibility_map = dictionary([
     :both => [RenderPassInside(), RenderPassOutside()],
